@@ -152,6 +152,8 @@
         field({ k: 'status', l: 'Estado', t: 'select', options: Object.entries(STATUS) }, v),
         field({ k: 'companions', l: 'Acompanhantes confirmados', t: 'number', min: 0, max: 50 }, v)),
       h('div', { class: 'grid space' },
+        field({ k: 'salutation', l: 'Saudação na carta (opcional)', ph: 'Querida tia Ana,', help: 'Vazio: usa a saudação geral com o nome do convidado.' }, v),
+        field({ k: 'personal_message', l: 'Mensagem pessoal na carta (opcional)', t: 'area', help: 'Só este convidado a vê, pelo seu link pessoal. Vazio: usa a mensagem geral.' }, v),
         field({ k: 'companion_names', l: 'Nomes dos acompanhantes (um por linha)', t: 'area' }, { companion_names: names }),
         field({ k: 'notes', l: 'Observação do convidado', t: 'area', rows: 2 }, v),
         field({ k: 'admin_notes', l: 'Notas internas (nunca públicas)', t: 'area', rows: 2 }, v)),
@@ -171,13 +173,13 @@
       onsubmit: (e) => {
         e.preventDefault();
         const rows = area.value.split(/\r?\n/).map((l) => l.split(/[;\t]/).map((x) => x.trim())).filter((c) => c[0])
-          .map(([name, phone, group_name, max_companions]) => ({ name, phone, group_name, max_companions }));
+          .map(([name, phone, group_name, max_companions, salutation, ...rest]) => ({ name, phone, group_name, max_companions, salutation, personal_message: rest.join('; ') }));
         dlg.close(); dlg.remove();
         act(() => api('guests/import', 'POST', { rows }), `${rows.length} linha(s) importada(s).`);
       },
     },
       h('h2', null, 'Importar lista de convidados'),
-      h('p', { class: 'muted' }, 'Cole uma linha por convidado: Nome; Telefone; Grupo; Nº de acompanhantes. Pode copiar directamente do Excel.'),
+      h('p', { class: 'muted' }, 'Cole uma linha por convidado: Nome; Telefone; Grupo; Nº de acompanhantes; Saudação; Mensagem pessoal. As duas últimas são opcionais. Pode copiar directamente do Excel.'),
       area,
       h('div', { class: 'row end space' }, h('button', { class: 'btn alt', type: 'button', onclick: () => { dlg.close(); dlg.remove(); } }, 'Cancelar'), h('button', { class: 'btn' }, 'Importar'))));
     document.body.append(dlg);
@@ -328,6 +330,21 @@
         { k: 'footer_brand', l: 'Nome' }, { k: 'footer_text', l: 'Texto' }, { k: 'footer_instagram', l: 'Instagram (URL)' },
         { k: 'footer_whatsapp', l: 'WhatsApp (só dígitos, com 258)' }, { k: 'footer_email', l: 'Email' }, { k: 'footer_copyright', l: 'Direitos' },
       ]),
+    ]],
+    carta: ['Carta e história', () => [
+      h('h1', null, 'Carta e história'),
+      settingsForm('Carta de abertura', [
+        { k: 'show_letter', l: 'Mostrar a carta depois de abrir o envelope', t: 'check' },
+        { k: 'show_celebration', l: 'Mostrar pétalas e passe ao confirmar', t: 'check' },
+        { k: 'letter_greeting_personal', l: 'Saudação no link pessoal', help: '{nome} é substituído pelo nome do convidado.' },
+        { k: 'letter_greeting_general', l: 'Saudação no link geral' },
+        { k: 'letter_message', l: 'Mensagem geral', t: 'area', help: 'Para uma mensagem diferente, edite o convidado em Convidados.' },
+      ]),
+      crud('chapters', 'Capítulos da história', [
+        { k: 'label', l: 'Etiqueta', ph: 'Capítulo um' }, { k: 'title', l: 'Título' },
+        { k: 'text', l: 'Texto', t: 'area' },
+      ], D.chapters, { ordered: true, image: true }),
+      h('p', { class: 'muted' }, 'Sem capítulos, esta secção não aparece no convite.'),
     ]],
     programa: ['Programa e locais', () => [
       h('h1', null, 'Programa e locais'),

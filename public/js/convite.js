@@ -3,7 +3,7 @@
   const bootEl = document.getElementById('boot');
   if (!bootEl) { location.replace('/'); return; }
   const data = JSON.parse(bootEl.textContent);
-  const { s, events, gallery, messages, stores, categories, gifts, rsvp, invalidToken } = data;
+  const { s, chapters, events, gallery, messages, stores, categories, gifts, rsvp, invalidToken } = data;
   let guest = data.guest;
   const app = document.getElementById('app');
 
@@ -66,6 +66,7 @@
   const firstName = (n) => (n || '').trim().split(/\s+/)[0] || '';
   const mapHref = (url, place) => url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
   const safeHref = (url) => (/^https?:\/\//i.test(url || '') ? url : null);
+  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Tema: valores já validados no servidor.
   const root = document.documentElement.style;
@@ -92,28 +93,74 @@
   const shareText = () => `💍 ${s.couple_display}\n\n${s.share_message}\n\nVeja o nosso convite:\n${location.origin}/`;
   const shareBtn = (cls) => h('a', { class: `btn ${cls || ''}`, target: '_blank', rel: 'noopener', href: `https://wa.me/?text=${encodeURIComponent(shareText())}` }, icon(ICONS.share), 'Partilhar no WhatsApp');
 
-  // ---------- Envelope ----------
+  // ---------- Envelope e carta ----------
+  // Escreve letra a letra, sem partir palavras. Devolve o instante em que termina (ms).
+  function inkWrite(el, text, start, step) {
+    if (reducedMotion()) { el.textContent = text; return 0; }
+    el.replaceChildren();
+    let i = 0;
+    text.split(/(\s+)/).filter(Boolean).forEach((part) => {
+      const word = h('span', { class: 'word' });
+      Array.from(part).forEach((c) => {
+        const ch = h('span', { class: 'ch' }, c);
+        ch.style.setProperty('--d', `${Math.round(start + i * step)}ms`);
+        word.append(ch);
+        i++;
+      });
+      el.append(word);
+    });
+    return start + i * step;
+  }
+
   function cover() {
     const envBtn = h('button', { class: 'env', type: 'button', 'aria-label': 'Abrir o convite' },
       h('div', { class: 'env-body' }),
       h('div', { class: 'env-letter' }, s.couple_display),
       h('div', { class: 'env-pocket' }),
       h('div', { class: 'env-flap' }),
-      h('div', { class: 'env-seal' }, s.envelope_seal_text));
+      h('div', { class: 'env-seal' },
+        h('i', { class: 'seal-half l' }, s.envelope_seal_text), h('i', { class: 'seal-half r' }, s.envelope_seal_text),
+        [1, 2, 3, 4, 5].map(() => h('span', { class: 'shard' }))));
+    const timers = [];
+    const later = (fn, ms) => timers.push(setTimeout(fn, reducedMotion() ? 0 : ms));
+    const finish = () => {
+      timers.forEach(clearTimeout);
+      box.classList.add('gone');
+      document.body.classList.remove('locked');
+      try { sessionStorage.setItem('opened', '1'); } catch { /* opcional */ }
+      setTimeout(() => box.remove(), 1000);
+    };
+    const go = h('button', { class: 'btn letter-go', type: 'button', onclick: finish }, 'Abrir o convite');
+    const greeting = guest
+      ? guest.salutation || s.letter_greeting_personal.split('{nome}').join(guest.name)
+      : s.letter_greeting_general;
+    const message = (guest && guest.personal_message) || s.letter_message;
+    const lines = [h('p', { class: 'hand hand-to', 'aria-hidden': 'true' }), h('p', { class: 'hand hand-msg', 'aria-hidden': 'true' }), h('p', { class: 'hand hand-by', 'aria-hidden': 'true' })];
+    const letter = h('div', { class: 'letter' }, h('div', { class: 'letter-in' },
+      h('p', { class: 'sr' }, `${greeting} ${message} ${s.couple_display}`), lines, go));
+    const showLetter = () => {
+      const texts = [greeting, message, s.couple_display];
+      const step = Math.min(30, 5000 / Math.max(texts.join('').length, 1));
+      let at = 500;
+      texts.forEach((text, i) => { at = inkWrite(lines[i], text, at, step) + 250; });
+      box.classList.add('reading');
+      later(() => { go.classList.add('show'); go.focus({ preventScroll: true }); }, at);
+    };
     const box = h('div', { class: 'cover' },
+      h('button', { class: 'skip', type: 'button', onclick: () => { startMusic(); finish(); } }, 'Saltar abertura'),
       guest ? h('div', null, h('div', { class: 'cover-to' }, 'Para'), h('div', { class: 'cover-guest' }, guest.name)) : null,
       envBtn,
       h('div', null, h('div', { class: 'cover-names' }, s.couple_display), h('div', { class: 'cover-date' }, longDate(s.wedding_date))),
-      h('div', { class: 'cover-hint' }, s.cover_hint));
+      h('div', { class: 'cover-hint' }, s.cover_hint),
+      shown('letter') ? letter : null);
     const open = () => {
-      if (envBtn.classList.contains('open')) return;
-      envBtn.classList.add('open');
+      if (envBtn.classList.contains('broken')) return;
+      envBtn.classList.add('broken');
+      try { if (navigator.vibrate) navigator.vibrate([25, 40, 60]); } catch { /* opcional */ }
       startMusic();
-      setTimeout(() => {
-        box.classList.add('gone');
-        document.body.classList.remove('locked');
-        try { sessionStorage.setItem('opened', '1'); } catch { /* opcional */ }
-      }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1250);
+      later(() => envBtn.classList.add('open'), 420);
+      if (shown('letter')) later(showLetter, 1450);
+      else later(finish, 1670);
     };
     envBtn.addEventListener('click', open);
     let startY = 0;
@@ -163,6 +210,18 @@
       h('p', { class: 'quote' }, `“${s.bible_quote}”`),
       h('p', { class: 'quote-by' }, s.bible_reference),
       s.story_text ? h('p', { class: 'lead', style: null }, h('br'), `${s.story_text}. — ${s.story_author}`) : null));
+  }
+
+  function chaptersView() {
+    if (!chapters.length) return null;
+    return section('historia', '', h('div', { class: 'wrap wide' },
+      sectionHead('chapters'),
+      h('div', { class: 'chapters' }, chapters.map((c) => h('article', { class: 'chapter reveal' },
+        c.image ? h('img', { class: 'chapter-img', src: media(c.image), alt: '', loading: 'lazy', decoding: 'async' }) : null,
+        h('div', null,
+          c.label ? h('div', { class: 'eyebrow' }, c.label) : null,
+          h('h3', null, c.title),
+          c.text ? h('p', { class: 'pre' }, c.text) : null))))));
   }
 
   function person(name, photo, label, father, mother) {
@@ -276,12 +335,148 @@
       lb));
   }
 
+  // ---------- Passe e pétalas ----------
+  const passFacts = () => {
+    const p = parts(s.wedding_date);
+    return [
+      ['Data', p.d ? `${p.d} ${MONTHS[p.m - 1].slice(0, 3)} ${p.y}` : ''],
+      ['Hora', (s.wedding_time || '').replace(':', 'h')],
+      ['Local', events[0] ? events[0].location : ''],
+      ['Pessoas', String(1 + (guest.companions || 0))],
+    ].filter(([, v]) => v);
+  };
+
+  // Desenhado num canvas próprio: a imagem não depende de bibliotecas nem contém o link pessoal.
+  async function savePass() {
+    const fontTitles = s.font_titles;
+    const fontText = s.font_text;
+    if (document.fonts) await Promise.all([document.fonts.load(`italic 60px ${fontTitles}`), document.fonts.load(`20px ${fontText}`)]).catch(() => {});
+    const canvas = h('canvas', { width: 900, height: 1200 });
+    const c = canvas.getContext('2d');
+    const center = (text, y) => c.fillText(text, 450, y);
+    const wrapLines = (text, width) => text.split(/\s+/).reduce((out, word) => {
+      const next = out.length ? `${out[out.length - 1]} ${word}` : word;
+      if (out.length && c.measureText(next).width <= width) out[out.length - 1] = next;
+      else out.push(word);
+      return out;
+    }, []);
+    c.fillStyle = s.color_primary;
+    c.fillRect(0, 0, 900, 1200);
+    c.fillStyle = '#fffcf6';
+    c.fillRect(60, 60, 780, 1080);
+    c.strokeStyle = s.color_gold;
+    c.lineWidth = 2;
+    c.strokeRect(84, 84, 732, 1032);
+    c.textAlign = 'center';
+    c.fillStyle = s.color_primary;
+    c.beginPath();
+    c.arc(450, 210, 62, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#f6e4c4';
+    c.font = `italic 44px ${fontTitles}`;
+    c.textBaseline = 'middle';
+    center(s.envelope_seal_text, 210);
+    c.textBaseline = 'alphabetic';
+    c.fillStyle = s.color_secondary;
+    c.font = `26px ${fontText}`;
+    center('PASSE DE CONVIDADO', 335);
+    c.fillStyle = s.color_primary;
+    c.font = `italic 68px ${fontTitles}`;
+    let y = 430;
+    wrapLines(guest.name, 660).slice(0, 3).forEach((line) => { center(line, y); y += 76; });
+    c.fillStyle = s.color_text;
+    c.font = `30px ${fontText}`;
+    center(s.couple_display, y + 10);
+    y += 70;
+    c.strokeStyle = s.color_gold;
+    c.setLineDash([10, 10]);
+    c.beginPath();
+    c.moveTo(130, y);
+    c.lineTo(770, y);
+    c.stroke();
+    c.setLineDash([]);
+    y += 70;
+    passFacts().forEach(([label, value]) => {
+      c.fillStyle = s.color_secondary;
+      c.font = `22px ${fontText}`;
+      center(label.toUpperCase(), y);
+      c.fillStyle = s.color_primary;
+      c.font = `42px ${fontTitles}`;
+      wrapLines(value, 640).slice(0, 2).forEach((line) => { y += 48; center(line, y); });
+      y += 62;
+    });
+    const blob = await new Promise((ok) => canvas.toBlob(ok, 'image/png'));
+    if (!blob) throw new Error('Não foi possível criar a imagem.');
+    const file = new File([blob], 'passe-casamento.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file] }).catch((e) => { if (e.name !== 'AbortError') throw e; });
+      return;
+    }
+    const a = h('a', { href: URL.createObjectURL(blob), download: file.name });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  function passView() {
+    return h('div', { class: 'pass' },
+      h('div', { class: 'pass-mono' }, s.envelope_seal_text),
+      h('div', { class: 'legend' }, 'Passe de convidado'),
+      h('div', { class: 'pass-name' }, guest.name),
+      h('dl', { class: 'pass-facts' }, passFacts().map(([k, v]) => h('div', null, h('dt', null, k), h('dd', null, v)))),
+      h('button', {
+        class: 'btn ghost full', type: 'button',
+        onclick: () => savePass().catch(() => toast('Não foi possível guardar o passe. Tente fazer uma captura do ecrã.')),
+      }, 'Guardar passe'));
+  }
+
+  function petals() {
+    if (reducedMotion()) return;
+    const canvas = h('canvas', { class: 'petals', 'aria-hidden': 'true' });
+    const c = canvas.getContext('2d');
+    if (!c) return;
+    document.body.append(canvas);
+    const w = innerWidth;
+    const hh = innerHeight;
+    const ratio = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = w * ratio;
+    canvas.height = hh * ratio;
+    c.scale(ratio, ratio);
+    const colours = [s.color_gold, s.color_primary, '#e4c98f', '#f3dcc0', '#b9545f'];
+    const list = Array.from({ length: 70 }, (_, i) => ({
+      x: Math.random() * w, y: -20 - Math.random() * hh, size: 4 + Math.random() * 6, speed: 1.3 + Math.random() * 1.8,
+      turn: Math.random() * 6.28, spin: (Math.random() - 0.5) * 0.1, sway: Math.random() * 6.28, colour: colours[i % colours.length],
+    }));
+    const begin = performance.now();
+    const frame = (now) => {
+      const fade = Math.max(0, Math.min(1, (5200 - (now - begin)) / 1000));
+      c.clearRect(0, 0, w, hh);
+      let alive = false;
+      list.forEach((p) => {
+        p.y += p.speed; p.turn += p.spin; p.sway += 0.03;
+        if (p.y < hh + 20) alive = true;
+        c.save();
+        c.globalAlpha = fade;
+        c.translate(p.x + Math.sin(p.sway) * 16, p.y);
+        c.rotate(p.turn);
+        c.fillStyle = p.colour;
+        c.beginPath();
+        c.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, 6.29);
+        c.fill();
+        c.restore();
+      });
+      if (alive && fade > 0) requestAnimationFrame(frame);
+      else canvas.remove();
+    };
+    requestAnimationFrame(frame);
+  }
+
   // ---------- RSVP ----------
   function thanksPanel(status, target) {
     const yes = status === 'sim';
+    const withPass = guest && yes && shown('celebration');
     const list = [];
     if (guest && yes) {
-      list.push(h('li', null, `${1 + (guest.companions || 0)} pessoa(s) confirmada(s)`));
+      if (!withPass) list.push(h('li', null, `${1 + (guest.companions || 0)} pessoa(s) confirmada(s)`));
       (guest.companion_names || []).forEach((n) => list.push(h('li', null, n)));
     }
     const personal = guest ? `${location.origin}/c/${guest.token}` : '';
@@ -289,6 +484,7 @@
       h('svg', { class: 'sealmark', viewBox: '0 0 48 48', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.4', 'aria-hidden': 'true' }, h('circle', { cx: '18', cy: '24', r: '11' }), h('circle', { cx: '30', cy: '24', r: '11' })),
       h('h3', null, yes ? 'Até breve!' : 'Obrigado'),
       h('p', null, yes ? s.thanks_yes : s.thanks_no),
+      withPass ? passView() : null,
       list.length ? h('ul', null, list) : null,
       h('div', { class: 'actions' },
         yes ? calBtn('') : null,
@@ -351,6 +547,7 @@
           target.replaceChildren(panel);
           panel.focus({ preventScroll: true });
           target.scrollIntoView({ block: 'center' });
+          if (status === 'sim' && shown('celebration')) petals();
         } catch (ex) {
           err.textContent = ex.message;
           submit.disabled = false;
@@ -540,7 +737,7 @@
     ['rsvp', 'Confirmar', ICONS.check], ['presentes', 'Presentes', ICONS.gift],
   ];
   const view = [
-    hero(), shown('welcome') && welcome(), shown('couple') && couple(), shown('date') && calendar(),
+    hero(), shown('welcome') && welcome(), shown('chapters') && chaptersView(), shown('couple') && couple(), shown('date') && calendar(),
     shown('program') && program(), shown('places') && places(), shown('dress') && dresscode(),
     shown('gallery') && galleryView(), shown('rsvp') && rsvpView(), shown('messages') && messagesView(),
     shown('gifts') && giftsView(), shown('manual') && manualView(),

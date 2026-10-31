@@ -17,7 +17,9 @@ Há duas formas de confirmar:
 - **Link pessoal (recomendado):** adicione o convidado e envie o link pelo botão **WhatsApp** ou **Copiar link**. O convite mostra o nome e o limite de acompanhantes, e o convidado pode alterar a resposta até ao prazo. Só assim sabe quem ainda não respondeu.
 - **Link geral:** qualquer pessoa escreve o nome. Pode desligar em **Data e confirmações**.
 
-**Importar:** em **Importar lista**, cole do Excel uma linha por convidado, com as colunas Nome, Telefone, Grupo e Acompanhantes.
+**Importar:** em **Importar lista**, cole do Excel uma linha por convidado, com as colunas Nome, Telefone, Grupo e Acompanhantes e, se quiser, Saudação e Mensagem pessoal.
+
+**Carta personalizada:** ao editar um convidado, preencha **Saudação** e **Mensagem pessoal**. Só esse convidado as vê, pelo link pessoal. Em branco, usa os textos gerais de **Carta e história**. Quem tiver o link pessoal consegue lê-las, por isso não escreva nada confidencial.
 
 **Duplicados:** o aviso "Possível duplicado" aparece quando há dois nomes iguais. Verifique e elimine o que estiver a mais.
 
@@ -34,6 +36,7 @@ Atenção: um link pessoal permite ver e alterar a resposta desse convidado. Nã
 | Dados do casal | Nomes, pais, fotografias, capa |
 | Data e confirmações | Data, prazo, regras e agradecimentos |
 | Textos | Citação, convite formal, mensagem de partilha, rodapé |
+| Carta e história | Textos da carta de abertura, pétalas e passe, e capítulos com foto |
 | Programa e locais | Momentos do dia; os locais alimentam a secção Localização |
 | Dress code, Galeria, Música, Presentes, Lojas, Informações | Conteúdos respectivos |
 | Secções e títulos | Mostrar, esconder e renomear cada parte do convite |

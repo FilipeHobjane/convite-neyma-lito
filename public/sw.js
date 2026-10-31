@@ -1,6 +1,6 @@
 ﻿// PWA: guarda só ficheiros estáticos e fotografias. Nunca guarda a página nem /api,
 // para o convidado não ver confirmações, prazos ou presentes desactualizados.
-const CACHE = 'convite-v2';
+const CACHE = 'convite-v3';
 const SHELL = ['/offline/', '/css/convite.css', '/js/convite.js', '/icons/favicon.png', '/fonts/cormorant.woff2', '/fonts/cormorant-italic.woff2', '/fonts/jost.woff2'];
 
 self.addEventListener('install', (event) => {

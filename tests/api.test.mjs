@@ -294,6 +294,64 @@ test('galeria e substituição de imagem apagam o ficheiro antigo', async () => 
   assert.equal((await call(`/media/${photo}`)).status, 404);
 });
 
+test('carta: mensagem pessoal só no link do próprio convidado', async () => {
+  const text = 'Mensagem-privada-da-tia <b>Ana</b>';
+  const { item } = await adminJson('guests', 'POST', { name: 'Tia Ana', salutation: 'Querida tia Ana,', personal_message: text });
+  const own = boot(await (await call(`/c/${item.token}`)).text());
+  assert.equal(own.guest.salutation, 'Querida tia Ana,');
+  assert.equal(own.guest.personal_message, text);
+  assert.ok(!(await (await call('/')).text()).includes('Mensagem-privada-da-tia'));
+  const { item: other } = await adminJson('guests', 'POST', { name: 'Outro Convidado' });
+  assert.ok(!(await (await call(`/c/${other.token}`)).text()).includes('Mensagem-privada-da-tia'));
+  assert.equal(boot(await (await call('/')).text()).s.show_letter, '1');
+  await admin(`guests/${other.id}`, 'DELETE');
+  await admin(`guests/${item.id}`, 'DELETE');
+});
+
+test('capítulos: público, ordem, protecção e ficheiro antigo', async () => {
+  assert.equal((await call('/api/admin/chapters', { body: { title: 'x' } })).status, 401);
+  assert.equal((await admin('chapters', 'POST', { title: '' })).status, 400);
+  const one = await upload(new Uint8Array(800).fill(4));
+  const a = (await adminJson('chapters', 'POST', { label: 'Um', title: 'Primeiro', text: 'Texto', image: one })).item;
+  const b = (await adminJson('chapters', 'POST', { title: 'Segundo' })).item;
+  assert.deepEqual(boot(await (await call('/')).text()).chapters.map((c) => c.id), [a.id, b.id]);
+  await admin(`chapters/${b.id}/move`, 'POST', { direction: 'up' });
+  assert.deepEqual((await adminJson('all')).chapters.map((c) => c.id), [b.id, a.id]);
+  const two = await upload(new Uint8Array(800).fill(5));
+  await admin(`chapters/${a.id}`, 'PUT', { ...a, image: two });
+  assert.equal((await call(`/media/${one}`)).status, 404);
+  const backup = await (await admin('backup/data')).json();
+  assert.equal(backup.tables.chapters.length, 2);
+  await admin(`chapters/${a.id}`, 'DELETE');
+  await admin(`chapters/${b.id}`, 'DELETE');
+  assert.equal((await call(`/media/${two}`)).status, 404);
+});
+
+test('migração: base da versão anterior ganha as colunas e mantém os dados', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'v2-'));
+  const path = join(folder, 'v2.db');
+  const old = new DatabaseSync(path);
+  old.exec(`CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE guests (id INTEGER PRIMARY KEY AUTOINCREMENT, token TEXT UNIQUE NOT NULL, name TEXT NOT NULL, phone TEXT DEFAULT '', group_name TEXT DEFAULT '', max_companions INTEGER DEFAULT 0, status TEXT NOT NULL DEFAULT 'pendente', companions INTEGER DEFAULT 0, companion_names TEXT DEFAULT '[]', notes TEXT DEFAULT '', admin_notes TEXT DEFAULT '', source TEXT DEFAULT 'lista', responded_at TEXT, created_at TEXT NOT NULL);
+    INSERT INTO settings VALUES('schema_version','2'),('couple_display','Casal Antigo');
+    INSERT INTO guests(token,name,created_at) VALUES('token-antigo-123','Convidado Antigo','2026-01-01');`);
+  old.close();
+  const other = await startServer({ port: 0, dbPath: path, env });
+  try {
+    const page = boot(await (await fetch(`http://127.0.0.1:${other.server.address().port}/c/token-antigo-123`)).text());
+    assert.equal(page.guest.name, 'Convidado Antigo');
+    assert.equal(page.guest.personal_message, '');
+    assert.equal(page.s.couple_display, 'Casal Antigo');
+    assert.deepEqual(page.chapters, []);
+    assert.equal(page.s.show_letter, '1');
+  } finally {
+    other.server.closeAllConnections();
+    await new Promise((ok) => other.server.close(ok));
+    other.db.close();
+    rmSync(folder, { recursive: true, force: true });
+  }
+});
+
 test('importação e exportação CSV (Excel e fórmulas)', async () => {
   const r = await adminJson('guests/import', 'POST', { rows: [{ name: 'Maria Sitoe', phone: '+258840000000', group_name: 'Amigos', max_companions: 1 }, { name: '=HYPERLINK("http://x")', max_companions: 0 }, { name: '' }] });
   assert.equal(r.imported, 2);

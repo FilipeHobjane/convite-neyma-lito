@@ -67,6 +67,7 @@ function publicGuest(g) {
   return g && {
     token: g.token, name: g.name, phone: g.phone, status: g.status, max_companions: g.max_companions,
     companions: g.companions, companion_names: parseNames(g.companion_names), notes: g.notes,
+    salutation: g.salutation || '', personal_message: g.personal_message || '',
   };
 }
 
@@ -75,8 +76,9 @@ function parseNames(text) {
 }
 
 async function publicData(db, token) {
-  const [settings, events, gallery, messages, stores, categories, gifts, guest] = await db.batch([
+  const [settings, chapters, events, gallery, messages, stores, categories, gifts, guest] = await db.batch([
     db.prepare(`SELECT key, value FROM settings WHERE key <> 'schema_version'`),
+    db.prepare('SELECT id,label,title,text,image FROM chapters ORDER BY order_index,id'),
     db.prepare('SELECT id,time,title,location,description,map_url FROM events ORDER BY order_index,id'),
     db.prepare('SELECT id,media_id,thumb_id,is_main FROM gallery ORDER BY is_main DESC, order_index, id'),
     db.prepare('SELECT id,nome,relacao,mensagem FROM messages WHERE aprovado=1 AND oculto=0 ORDER BY id DESC LIMIT 200'),
@@ -90,6 +92,7 @@ async function publicData(db, token) {
   const s = { ...DEFAULT_SETTINGS, ...Object.fromEntries(settings.results.map((r) => [r.key, r.value])) };
   return {
     s,
+    chapters: chapters.results,
     events: events.results,
     gallery: gallery.results,
     messages: messages.results,
@@ -357,6 +360,10 @@ async function updateSettings(request, db) {
 const mediaField = (v) => { const s = str(v, 40); return isMediaId(s) ? s : ''; };
 
 const COLLECTIONS = {
+  chapters: {
+    table: 'chapters', ordered: true, media: ['image'],
+    clean: (b) => ({ label: str(b.label, 60), title: str(b.title, 120) || fail(400, 'Indique o título.'), text: str(b.text, 800), image: mediaField(b.image) }),
+  },
   events: {
     table: 'events', ordered: true,
     clean: (b) => ({ time: str(b.time, 30), title: str(b.title, 120) || fail(400, 'Indique o título.'), location: str(b.location, 160), description: str(b.description, 600), map_url: safeUrl(b.map_url) }),
@@ -384,6 +391,7 @@ const COLLECTIONS = {
         phone: str(b.phone, 30), group_name: str(b.group_name, 80), max_companions: max, status, companions,
         companion_names: JSON.stringify((Array.isArray(b.companion_names) ? b.companion_names : []).slice(0, companions).map(normalizeName).filter(Boolean)),
         notes: str(b.notes, 1000), admin_notes: str(b.admin_notes, 1000),
+        salutation: str(b.salutation, 80), personal_message: str(b.personal_message, 600),
         responded_at: status === 'pendente' ? null : (str(b.responded_at, 40) || nowIso()),
       };
     },
@@ -460,8 +468,9 @@ function stats(guests, messages, gifts) {
 }
 
 async function adminAll(db) {
-  const [settings, events, guests, messages, gallery, categories, gifts, stores, usage] = await db.batch([
+  const [settings, chapters, events, guests, messages, gallery, categories, gifts, stores, usage] = await db.batch([
     db.prepare(`SELECT key, value FROM settings WHERE key <> 'schema_version'`),
+    db.prepare('SELECT * FROM chapters ORDER BY order_index,id'),
     db.prepare('SELECT * FROM events ORDER BY order_index,id'),
     db.prepare('SELECT * FROM guests ORDER BY name COLLATE NOCASE'),
     db.prepare('SELECT * FROM messages ORDER BY id DESC'),
@@ -474,6 +483,7 @@ async function adminAll(db) {
   return json({
     settings: { ...DEFAULT_SETTINGS, ...Object.fromEntries(settings.results.map((r) => [r.key, r.value])) },
     sections: SECTIONS,
+    chapters: chapters.results,
     events: events.results, guests: guests.results, messages: messages.results, gallery: gallery.results,
     categories: categories.results, gifts: gifts.results, stores: stores.results,
     stats: stats(guests.results, messages.results, gifts.results),
@@ -491,6 +501,7 @@ async function importGuests(request, db) {
     name: normalizeName(r.name), phone: str(r.phone, 30), group_name: str(r.group_name, 80),
     max_companions: int(r.max_companions, 0, 50, 0), token: randomToken(), status: 'pendente',
     companions: 0, companion_names: '[]', notes: '', admin_notes: '', source: 'lista', created_at: now,
+    salutation: str(r.salutation, 80), personal_message: str(r.personal_message, 600),
   })).filter((r) => r.name.length >= 2);
   if (clean.length) await bulkInsert(db, 'guests', Object.keys(clean[0]), clean);
   return json({ ok: true, imported: clean.length });
@@ -499,10 +510,10 @@ async function importGuests(request, db) {
 async function exportGuests(db) {
   const list = await rows(db.prepare('SELECT * FROM guests ORDER BY name COLLATE NOCASE'));
   const label = { sim: 'Confirmado', nao: 'Não vem', pendente: 'Sem resposta' };
-  const header = ['Nome', 'Telefone', 'Grupo', 'Estado', 'Acompanhantes', 'Máx. acompanhantes', 'Nomes dos acompanhantes', 'Observação', 'Notas internas', 'Origem', 'Respondeu em', 'Link pessoal (caminho)'];
+  const header = ['Nome', 'Telefone', 'Grupo', 'Estado', 'Acompanhantes', 'Máx. acompanhantes', 'Nomes dos acompanhantes', 'Observação', 'Notas internas', 'Origem', 'Respondeu em', 'Link pessoal (caminho)', 'Saudação', 'Mensagem pessoal'];
   const lines = [header.map(csvCell).join(';')];
   for (const g of list) {
-    lines.push([g.name, g.phone, g.group_name, label[g.status], g.companions, g.max_companions, parseNames(g.companion_names).join(', '), g.notes, g.admin_notes, g.source, g.responded_at, `/c/${g.token}`].map(csvCell).join(';'));
+    lines.push([g.name, g.phone, g.group_name, label[g.status], g.companions, g.max_companions, parseNames(g.companion_names).join(', '), g.notes, g.admin_notes, g.source, g.responded_at, `/c/${g.token}`, g.salutation, g.personal_message].map(csvCell).join(';'));
   }
   // BOM e ";" para o Excel abrir acentos e colunas correctamente em português.
   return new Response(`﻿${lines.join('\r\n')}\r\n`, {
@@ -655,7 +666,7 @@ async function adminRoutes(request, env, db, path, method) {
     await db.prepare('UPDATE gifts SET available=1, chosen_by=NULL WHERE id=?').bind(Number(m[1])).run();
     return json({ ok: true });
   }
-  if ((m = /^(events|stores|gift-categories)\/(\d+)\/move$/.exec(path)) && method === 'POST') {
+  if ((m = /^(chapters|events|stores|gift-categories)\/(\d+)\/move$/.exec(path)) && method === 'POST') {
     return move(request, db, COLLECTIONS[m[1]].table, Number(m[2]));
   }
   if ((m = /^([a-z-]+)(?:\/(\d+))?$/.exec(path)) && Object.hasOwn(COLLECTIONS, m[1])) {

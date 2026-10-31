@@ -1,5 +1,13 @@
 # Registo de alterações
 
+## 2.2.0 (31/10/2026)
+
+- Abertura: o selo parte-se ao toque e o telemóvel vibra, nos que o permitem. Botão para saltar a abertura.
+- Carta escrita no ecrã com saudação e mensagem por convidado, editáveis no painel e na importação.
+- História em capítulos com foto, secção nova no painel em **Carta e história**.
+- Ao confirmar: pétalas e passe com o nome do convidado, que pode ser guardado como imagem.
+- Bases existentes são actualizadas automaticamente no primeiro pedido, sem perder dados.
+
 ## 2.1.0 (31/10/2026)
 
 - Painel: nova secção para mostrar, esconder e renomear cada parte do convite, envelope e contagem.

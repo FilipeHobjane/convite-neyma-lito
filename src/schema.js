@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '2';
+export const SCHEMA_VERSION = '3';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -20,8 +20,11 @@ export const SCHEMA = [
      admin_notes TEXT DEFAULT '',
      source TEXT DEFAULT 'lista',
      responded_at TEXT,
-     created_at TEXT NOT NULL)`,
+     created_at TEXT NOT NULL,
+     salutation TEXT DEFAULT '',
+     personal_message TEXT DEFAULT '')`,
   `CREATE INDEX IF NOT EXISTS idx_guests_status ON guests(status)`,
+  `CREATE TABLE IF NOT EXISTS chapters (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, title TEXT NOT NULL, text TEXT, image TEXT DEFAULT '', order_index INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, relacao TEXT, mensagem TEXT NOT NULL, aprovado INTEGER DEFAULT 0, oculto INTEGER DEFAULT 0, data_criacao TEXT)`,
   `CREATE TABLE IF NOT EXISTS gallery (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id TEXT NOT NULL, thumb_id TEXT, is_main INTEGER DEFAULT 0, order_index INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS gift_categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, image TEXT DEFAULT '', order_index INTEGER DEFAULT 0)`,
@@ -34,8 +37,15 @@ export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS admin_auth (id INTEGER PRIMARY KEY CHECK (id = 1), password_hmac TEXT NOT NULL, secret_check TEXT NOT NULL)`,
 ];
 
+// Colunas acrescentadas a bases já existentes. SQLite não tem ADD COLUMN IF NOT EXISTS.
+export const COLUMN_MIGRATIONS = [
+  `ALTER TABLE guests ADD COLUMN salutation TEXT DEFAULT ''`,
+  `ALTER TABLE guests ADD COLUMN personal_message TEXT DEFAULT ''`,
+];
+
 // Secções do convite: a chave dá os nomes eyebrow, title e show nas definições.
 export const SECTIONS = {
+  chapters: ['A nossa história', 'A nossa história', 'Um capítulo de cada vez'],
   couple: ['Os noivos', 'Com a bênção dos nossos pais', 'Os Noivos'],
   date: ['Calendário', 'Reserve este dia', 'Guarde a Data'],
   program: ['Programa', 'O nosso dia', 'Programa'],
@@ -56,7 +66,8 @@ const SECTION_SETTINGS = Object.fromEntries(Object.entries(SECTIONS).flatMap(([k
 export const BACKUP_TABLES = {
   settings: ['key', 'value'],
   events: ['id', 'time', 'title', 'location', 'description', 'map_url', 'order_index'],
-  guests: ['id', 'token', 'name', 'phone', 'group_name', 'max_companions', 'status', 'companions', 'companion_names', 'notes', 'admin_notes', 'source', 'responded_at', 'created_at'],
+  guests: ['id', 'token', 'name', 'phone', 'group_name', 'max_companions', 'status', 'companions', 'companion_names', 'notes', 'admin_notes', 'source', 'responded_at', 'created_at', 'salutation', 'personal_message'],
+  chapters: ['id', 'label', 'title', 'text', 'image', 'order_index'],
   messages: ['id', 'nome', 'relacao', 'mensagem', 'aprovado', 'oculto', 'data_criacao'],
   gallery: ['id', 'media_id', 'thumb_id', 'is_main', 'order_index'],
   gift_categories: ['id', 'name', 'image', 'order_index'],
@@ -152,7 +163,12 @@ export const DEFAULT_SETTINGS = {
   show_envelope: '1',
   show_countdown: '1',
   show_welcome: '1',
-  cover_hint: 'Toque no envelope para abrir',
+  show_letter: '1',
+  show_celebration: '1',
+  letter_greeting_general: 'Querido(a) convidado(a),',
+  letter_greeting_personal: 'Querido(a) {nome},',
+  letter_message: 'Este dia não seria o mesmo sem si. Ficaremos muito felizes por celebrá-lo consigo.',
+  cover_hint: 'Toque no selo para abrir',
   hero_eyebrow: 'Vamos casar',
   hero_eyebrow_after: 'Casámos',
   ...SECTION_SETTINGS,
@@ -187,6 +203,11 @@ export async function ensureSchema(db) {
   } catch { /* tabela ainda não existe */ }
   if (current !== SCHEMA_VERSION) {
     await db.batch(SCHEMA.map((sql) => db.prepare(sql)));
+    for (const sql of COLUMN_MIGRATIONS) {
+      try { await db.prepare(sql).run(); } catch (err) {
+        if (!String(err && err.message).includes('duplicate column')) throw err;
+      }
+    }
     await db.prepare(`INSERT OR IGNORE INTO settings(key,value) SELECT key, value FROM json_each(?)`).bind(JSON.stringify(DEFAULT_SETTINGS)).run();
     if (current === null) await seedLists(db);
     await db.prepare(`INSERT OR REPLACE INTO settings(key,value) VALUES('schema_version',?)`).bind(SCHEMA_VERSION).run();

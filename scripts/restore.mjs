@@ -4,7 +4,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { BACKUP_TABLES, SCHEMA, SCHEMA_VERSION } from '../src/schema.js';
+import { BACKUP_TABLES, COLUMN_MIGRATIONS, SCHEMA, SCHEMA_VERSION } from '../src/schema.js';
 
 const [file, target = 'data/convite.db'] = process.argv.slice(2);
 if (!file || !existsSync(file)) {
@@ -20,6 +20,9 @@ const db = new DatabaseSync(path);
 db.exec('BEGIN');
 try {
   SCHEMA.forEach((sql) => db.exec(sql));
+  for (const sql of COLUMN_MIGRATIONS) {
+    try { db.exec(sql); } catch (err) { if (!String(err.message).includes('duplicate column')) throw err; }
+  }
   for (const t of [...Object.keys(BACKUP_TABLES), 'media_chunks']) db.exec(`DELETE FROM ${t}`);
   for (const [table, cols] of Object.entries(BACKUP_TABLES)) {
     const stmt = db.prepare(`INSERT INTO ${table}(${cols.join(',')}) VALUES(${cols.map(() => '?').join(',')})`);
