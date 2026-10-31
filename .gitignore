@@ -1,0 +1,19 @@
+# Segredos
+.env
+.dev.vars
+
+# Dados pessoais: nunca enviar para o repositório
+data/
+backups/
+*.db
+*.db-wal
+*.db-shm
+convite-backup-*.json
+
+# Ferramentas
+.wrangler/
+node_modules/
+.claude/
+
+# Originais preservados localmente
+_originais/

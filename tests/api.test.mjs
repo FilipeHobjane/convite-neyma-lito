@@ -1,0 +1,410 @@
+// Testes sem dependências: node --test tests/
+import { after, before, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { execFile, execFileSync } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { fileURLToPath } from 'node:url';
+import { startServer } from '../server/local.mjs';
+
+const dir = mkdtempSync(join(tmpdir(), 'convite-'));
+// Com TEST_BASE, os testes correm contra um servidor já ligado (ex.: wrangler pages dev) com base vazia.
+const PASSWORD = process.env.TEST_PASSWORD || 'senha-de-teste-muito-longa';
+const BACKUP_TOKEN = process.env.TEST_BACKUP_TOKEN || 'token-de-backup-de-teste-0123456789';
+const env = { ADMIN_PASSWORD: PASSWORD, SESSION_SECRET: 'segredo-de-teste-0123456789', BACKUP_TOKEN };
+let base;
+let srv;
+let cookie = '';
+
+before(async () => {
+  if (process.env.TEST_BASE) base = process.env.TEST_BASE;
+  else {
+    srv = await startServer({ port: 0, dbPath: join(dir, 't.db'), env });
+    base = `http://127.0.0.1:${srv.server.address().port}`;
+  }
+  // A data predefinida pode já ter passado: os testes usam um prazo futuro.
+  const r = await call('/api/admin/login', { body: { password: PASSWORD } });
+  assert.equal(r.status, 200);
+  cookie = r.headers.get('set-cookie').split(';')[0];
+  const s = await admin('settings', 'PUT', { rsvp_deadline: '2099-01-01', wedding_date: '2099-01-02' });
+  assert.equal(s.status, 200);
+});
+
+after(async () => {
+  if (srv) {
+    srv.server.closeAllConnections();
+    await new Promise((ok) => srv.server.close(ok));
+    srv.db.close();
+  }
+  rmSync(dir, { recursive: true, force: true });
+});
+
+function call(path, { method, body, headers = {}, raw } = {}) {
+  const opts = { method: method || (body || raw ? 'POST' : 'GET'), headers: { ...headers }, redirect: 'manual' };
+  if (body) { opts.body = JSON.stringify(body); opts.headers['Content-Type'] = 'application/json'; }
+  if (raw) opts.body = raw;
+  return fetch(base + path, opts);
+}
+const admin = (path, method = 'GET', body) => call(`/api/admin/${path}`, { method, body, headers: { Cookie: cookie } });
+const adminJson = async (...a) => (await admin(...a)).json();
+const boot = (html) => JSON.parse(/<script id="boot" type="application\/json">(.*?)<\/script>/s.exec(html)[1]);
+
+test('página inicial: metadados, dados e cabeçalhos de segurança', async () => {
+  const r = await call('/');
+  assert.equal(r.status, 200);
+  const html = await r.text();
+  assert.match(html, /<meta property="og:title" content="Convite de Casamento \| Nelde &amp; Nilton">/);
+  assert.match(html, /og:image" content="http:\/\/127\.0\.0\.1:\d+\/icons\/og\.jpg"/);
+  assert.equal(boot(html).s.couple_display, 'Nelde & Nilton');
+  assert.match(r.headers.get('content-security-policy'), /script-src 'self'/);
+  assert.equal(r.headers.get('x-frame-options'), 'DENY');
+});
+
+test('estáticos, 404 e travessia de pastas', async () => {
+  for (const p of ['/css/convite.css', '/js/convite.js', '/js/admin.js', '/admin/', '/sw.js', '/manifest.webmanifest', '/icons/og.jpg', '/fonts/jost.woff2']) {
+    assert.equal((await call(p)).status, 200, p);
+  }
+  assert.equal((await call('/nao-existe')).status, 404);
+  const trav = await call('/..%2f..%2fsrc%2fapp.js');
+  assert.equal(trav.status, 404);
+  assert.doesNotMatch(await trav.text(), /renderInvite/);
+});
+
+test('RSVP pelo link geral cria registo e valida dados', async () => {
+  assert.equal((await call('/api/rsvp', { body: { nome: '', status: 'sim' } })).status, 400);
+  assert.equal((await call('/api/rsvp', { body: { nome: 'Ana Silva', status: 'talvez' } })).status, 400);
+  assert.equal((await call('/api/rsvp', { body: { nome: 'Ana Silva', status: 'sim', acompanhantes: 3 } })).status, 400);
+  const ok = await (await call('/api/rsvp', { body: { nome: 'Ana Silva', status: 'sim' } })).json();
+  assert.ok(ok.token);
+  const { guests } = await adminJson('all');
+  assert.equal(guests.find((g) => g.name === 'Ana Silva').status, 'sim');
+});
+
+test('campo isca não grava nada', async () => {
+  const r = await call('/api/rsvp', { body: { nome: 'Robot', status: 'sim', website: 'spam.example' } });
+  assert.equal(r.status, 200);
+  const { guests } = await adminJson('all');
+  assert.ok(!guests.some((g) => g.name === 'Robot'));
+});
+
+test('link pessoal: resposta, limite de acompanhantes e actualização', async () => {
+  const { item } = await adminJson('guests', 'POST', { name: 'João Macuácua', max_companions: 2 });
+  assert.equal(item.status, 'pendente');
+  const page = boot(await (await call(`/c/${item.token}`)).text());
+  assert.equal(page.guest.name, 'João Macuácua');
+  assert.equal(page.guest.max_companions, 2);
+  assert.equal(page.guest.admin_notes, undefined);
+
+  const over = await call('/api/rsvp', { body: { token: item.token, status: 'sim', acompanhantes: 3 } });
+  assert.equal(over.status, 400);
+  const yes = await call('/api/rsvp', { body: { token: item.token, status: 'sim', acompanhantes: 2, nomes_acompanhantes: ['A', 'B', 'C'] } });
+  assert.equal(yes.status, 200);
+  let g = (await adminJson('all')).guests.find((x) => x.id === item.id);
+  assert.equal(g.companions, 2);
+  assert.deepEqual(JSON.parse(g.companion_names), ['A', 'B']);
+
+  await call('/api/rsvp', { body: { token: item.token, status: 'nao', acompanhantes: 2 } });
+  const all = await adminJson('all');
+  g = all.guests.find((x) => x.id === item.id);
+  assert.equal(g.status, 'nao');
+  assert.equal(g.companions, 0);
+  assert.equal(all.guests.filter((x) => x.name === 'João Macuácua').length, 1, 'não duplica');
+});
+
+test('token inválido devolve 404 sem dados de convidado', async () => {
+  const r = await call('/c/inexistente123');
+  assert.equal(r.status, 404);
+  const data = boot(await r.text());
+  assert.equal(data.guest, null);
+  assert.equal(data.invalidToken, true);
+  assert.equal((await call('/api/rsvp', { body: { token: 'inexistente123', status: 'sim' } })).status, 404);
+});
+
+test('prazo terminado bloqueia RSVP público', async () => {
+  await admin('settings', 'PUT', { rsvp_deadline: '2020-01-01' });
+  const r = await call('/api/rsvp', { body: { nome: 'Tardio Nome', status: 'sim' } });
+  assert.equal(r.status, 403);
+  await admin('settings', 'PUT', { rsvp_deadline: '2099-01-01' });
+});
+
+test('XSS: texto de convidado não fecha o bloco de dados', async () => {
+  const evil = '</script><script>alert(1)</script>';
+  await admin('messages', 'POST', { nome: 'Teste', mensagem: evil, aprovado: true });
+  const html = await (await call('/')).text();
+  assert.ok(!html.includes(evil));
+  assert.ok(boot(html).messages.some((m) => m.mensagem === evil));
+});
+
+test('SQL injection é tratada como texto', async () => {
+  const name = "Robert'); DROP TABLE guests;--";
+  assert.equal((await call('/api/rsvp', { body: { nome: name, status: 'nao' } })).status, 200);
+  const { guests } = await adminJson('all');
+  assert.ok(guests.some((g) => g.name === name));
+});
+
+test('mensagens só aparecem depois de aprovadas', async () => {
+  await call('/api/mensagem', { body: { nome: 'Rita', mensagem: 'Parabéns aos dois' } });
+  let page = boot(await (await call('/')).text());
+  assert.ok(!page.messages.some((m) => m.mensagem === 'Parabéns aos dois'));
+  const msg = (await adminJson('all')).messages.find((m) => m.mensagem === 'Parabéns aos dois');
+  await admin(`messages/${msg.id}`, 'PUT', { ...msg, aprovado: 1 });
+  page = boot(await (await call('/')).text());
+  assert.ok(page.messages.some((m) => m.mensagem === 'Parabéns aos dois'));
+});
+
+test('presentes: escolha única, regra por convidado e privacidade', async () => {
+  const { categories } = await adminJson('all');
+  const a = (await adminJson('gifts', 'POST', { name: 'Tacho', category_id: categories[0].id })).item;
+  const b = (await adminJson('gifts', 'POST', { name: 'Copos', category_id: categories[0].id })).item;
+  const [r1, r2] = await Promise.all([
+    call(`/api/presente/${a.id}`, { body: { nome: 'Pessoa Um' } }),
+    call(`/api/presente/${a.id}`, { body: { nome: 'Pessoa Dois' } }),
+  ]);
+  assert.deepEqual([r1.status, r2.status].sort(), [200, 409]);
+  const winner = r1.status === 200 ? 'Pessoa Um' : 'Pessoa Dois';
+  assert.equal((await call(`/api/presente/${b.id}`, { body: { nome: winner.toUpperCase() } })).status, 409);
+  const html = await (await call('/')).text();
+  assert.ok(!html.includes(winner), 'quem escolheu não é público');
+});
+
+test('autenticação: rotas protegidas, sessão falsa e origem externa', async () => {
+  assert.equal((await call('/api/admin/all')).status, 401);
+  assert.equal((await call('/api/admin/export/guests.csv')).status, 401);
+  assert.equal((await call('/api/admin/all', { headers: { Cookie: 'convite_admin=9999999999999.abc' } })).status, 401);
+  const expired = await call('/api/admin/all', { headers: { Cookie: 'convite_admin=1000.abc' } });
+  assert.equal(expired.status, 401);
+  const cross = await call('/api/admin/settings', { method: 'PUT', body: { site_title: 'x' }, headers: { Cookie: cookie, Origin: 'https://atacante.example' } });
+  assert.equal(cross.status, 403);
+  const page = await call('/');
+  assert.equal(page.headers.get('set-cookie'), null);
+});
+
+test('cookie de sessão tem HttpOnly e SameSite', async () => {
+  const r = await admin('logout', 'POST', {});
+  assert.match(r.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
+});
+
+test('definições: lista branca e validação', async () => {
+  await admin('settings', 'PUT', { chave_inventada: 'x' });
+  assert.equal((await adminJson('all')).settings.chave_inventada, undefined);
+  assert.equal((await admin('settings', 'PUT', { color_primary: 'red;}body{display:none' })).status, 400);
+  assert.equal((await admin('settings', 'PUT', { font_titles: "x';}" })).status, 400);
+  const saved = await adminJson('settings', 'PUT', { footer_instagram: 'javascript:alert(1)' });
+  assert.equal(saved.settings.footer_instagram, '');
+});
+
+test('secções: esconder e renomear a partir das definições', async () => {
+  await admin('settings', 'PUT', { show_gallery: '0', program_title: 'O Grande Dia', show_rsvp: 'lixo' });
+  const page = boot(await (await call('/')).text());
+  assert.equal(page.s.show_gallery, '0');
+  assert.equal(page.s.program_title, 'O Grande Dia');
+  assert.equal(page.s.show_rsvp, '0');
+  await admin('settings', 'PUT', { show_gallery: '1', show_rsvp: '1', program_title: 'Programa' });
+});
+
+test('senha: mudar no painel, senha antiga e sessões antigas deixam de valer', async () => {
+  const novo = 'nova-senha-do-administrador';
+  assert.equal((await admin('password', 'POST', { current: 'errada', next: novo })).status, 401);
+  assert.equal((await admin('password', 'POST', { current: PASSWORD, next: 'curta' })).status, 400);
+  const oldCookie = cookie;
+  const ok = await admin('password', 'POST', { current: PASSWORD, next: novo });
+  assert.equal(ok.status, 200);
+  cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await call('/api/admin/me', { headers: { Cookie: oldCookie } })).status, 401);
+  assert.equal((await admin('me')).status, 200);
+  assert.equal((await call('/api/admin/login', { body: { password: PASSWORD } })).status, 401);
+  assert.equal((await call('/api/admin/login', { body: { password: novo } })).status, 200);
+  const data = await (await admin('backup/data')).json();
+  assert.ok(!JSON.stringify(data).includes('password_hmac'), 'a senha não entra nas cópias');
+  assert.ok(!(await (await call('/')).text()).includes('password_hmac'));
+});
+
+test('senha esquecida: mudar SESSION_SECRET repõe ADMIN_PASSWORD', async () => {
+  const path = join(dir, 'rec.db');
+  const start = (secret) => startServer({ port: 0, dbPath: path, env: { ...env, SESSION_SECRET: secret } });
+  const stop = async (s) => { s.server.closeAllConnections(); await new Promise((ok) => s.server.close(ok)); s.db.close(); };
+  const login = (s, password) => fetch(`http://127.0.0.1:${s.server.address().port}/api/admin/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+  let s = await start('segredo-um-0123456789');
+  const c = (await login(s, env.ADMIN_PASSWORD)).headers.get('set-cookie').split(';')[0];
+  await fetch(`http://127.0.0.1:${s.server.address().port}/api/admin/password`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: c }, body: JSON.stringify({ current: env.ADMIN_PASSWORD, next: 'senha-que-vou-esquecer' }) });
+  assert.equal((await login(s, env.ADMIN_PASSWORD)).status, 401);
+  await stop(s);
+  s = await start('segredo-dois-0123456789');
+  assert.equal((await login(s, env.ADMIN_PASSWORD)).status, 200);
+  await stop(s);
+});
+
+test('endereço de mapa javascript: é rejeitado', async () => {
+  const { item } = await adminJson('events', 'POST', { title: 'Teste', map_url: 'javascript:alert(1)' });
+  assert.equal(item.map_url, '');
+  await admin(`events/${item.id}`, 'DELETE');
+});
+
+test('ordenar programa', async () => {
+  const before = (await adminJson('all')).events.map((e) => e.id);
+  await admin(`events/${before[1]}/move`, 'POST', { direction: 'up' });
+  const after = (await adminJson('all')).events.map((e) => e.id);
+  assert.deepEqual(after.slice(0, 2), [before[1], before[0]]);
+  await admin(`events/${before[1]}/move`, 'POST', { direction: 'down' });
+});
+
+async function upload(bytes, mime = 'image/jpeg') {
+  const meta = await adminJson('media', 'POST', { mime, name: 'f', size: bytes.length });
+  for (let i = 0; i < meta.chunks; i++) {
+    const r = await call(`/api/admin/media/${meta.id}/${i}`, { method: 'PUT', raw: bytes.subarray(i * meta.chunk_size, (i + 1) * meta.chunk_size), headers: { Cookie: cookie } });
+    assert.equal(r.status, 200);
+  }
+  return meta.id;
+}
+
+test('ficheiros: tipo, divisão em blocos, Range (iPhone) e eliminação', async () => {
+  assert.equal((await admin('media', 'POST', { mime: 'text/html', name: 'x', size: 10 })).status, 400);
+  assert.equal((await admin('media', 'POST', { mime: 'image/jpeg', name: 'x', size: 99_000_000 })).status, 413);
+  const bytes = new Uint8Array(2_000_000).map((_, i) => i % 251);
+  const id = await upload(bytes, 'audio/mpeg');
+  const full = await call(`/media/${id}`);
+  assert.equal(full.status, 200);
+  assert.deepEqual(new Uint8Array(await full.arrayBuffer()), bytes);
+  assert.match(full.headers.get('cache-control'), /immutable/);
+  const part = await call(`/media/${id}`, { headers: { Range: 'bytes=899990-900009' } });
+  assert.equal(part.status, 206);
+  assert.equal(part.headers.get('content-range'), 'bytes 899990-900009/2000000');
+  assert.deepEqual(new Uint8Array(await part.arrayBuffer()), bytes.slice(899990, 900010));
+  assert.equal((await call(`/media/${id}`, { headers: { Range: 'bytes=9999999-' } })).status, 416);
+  assert.equal((await admin(`media/${id}`, 'DELETE')).status, 200);
+  assert.equal((await call(`/media/${id}`)).status, 404);
+});
+
+test('galeria e substituição de imagem apagam o ficheiro antigo', async () => {
+  const one = await upload(new Uint8Array(1000).fill(1));
+  await admin('settings', 'PUT', { cover_image: one });
+  const html = await (await call('/')).text();
+  assert.ok(html.includes(`/media/${one}`));
+  const two = await upload(new Uint8Array(1000).fill(2));
+  await admin('settings', 'PUT', { cover_image: two });
+  assert.equal((await call(`/media/${one}`)).status, 404);
+
+  const photo = await upload(new Uint8Array(500).fill(3));
+  const { item } = await adminJson('gallery', 'POST', { media_id: photo });
+  assert.ok(boot(await (await call('/')).text()).gallery.some((g) => g.id === item.id));
+  await admin(`gallery/${item.id}`, 'DELETE');
+  assert.equal((await call(`/media/${photo}`)).status, 404);
+});
+
+test('importação e exportação CSV (Excel e fórmulas)', async () => {
+  const r = await adminJson('guests/import', 'POST', { rows: [{ name: 'Maria Sitoe', phone: '+258840000000', group_name: 'Amigos', max_companions: 1 }, { name: '=HYPERLINK("http://x")', max_companions: 0 }, { name: '' }] });
+  assert.equal(r.imported, 2);
+  const csv = await admin('export/guests.csv');
+  assert.match(csv.headers.get('content-type'), /text\/csv/);
+  const text = new TextDecoder('utf-8', { ignoreBOM: true }).decode(await csv.arrayBuffer());
+  assert.equal(text.charCodeAt(0), 0xFEFF);
+  assert.ok(text.includes('Maria Sitoe'));
+  assert.ok(text.includes(`"'=HYPERLINK`));
+});
+
+test('estatísticas: confirmados, acompanhantes e pendentes', async () => {
+  const { stats, guests } = await adminJson('all');
+  assert.equal(stats.total, guests.length);
+  assert.equal(stats.sim + stats.nao + stats.pendente, stats.total);
+  assert.equal(stats.pessoas, stats.sim + stats.acompanhantes);
+});
+
+test('token de backup só lê cópias', async () => {
+  const auth = { Authorization: `Bearer ${BACKUP_TOKEN}` };
+  assert.equal((await call('/api/admin/backup/data', { headers: auth })).status, 200);
+  assert.equal((await call('/api/admin/all', { headers: auth })).status, 403);
+  assert.equal((await call('/api/admin/settings', { method: 'PUT', body: {}, headers: auth })).status, 401);
+  assert.equal((await call('/api/admin/backup/data', { headers: { Authorization: 'Bearer errado' } })).status, 401);
+});
+
+test('backup por script e recuperação numa base nova, com ficheiros idênticos', async () => {
+  const bytes = new Uint8Array(1_500_000).map((_, i) => (i * 7) % 256);
+  const id = await upload(bytes, 'audio/mpeg');
+  await admin('settings', 'PUT', { music_file: id, music_enabled: '1' });
+  const before = await adminJson('all');
+
+  const script = (name) => fileURLToPath(new URL(`../scripts/${name}`, import.meta.url));
+  const out = join(dir, 'bk');
+  // Assíncrono: o servidor corre neste processo e tem de continuar a responder ao script.
+  const { stdout: log } = await promisify(execFile)(process.execPath, ['--no-warnings', script('backup.mjs'), base, out], { env: { ...process.env, BACKUP_TOKEN }, encoding: 'utf8' });
+  const file = /Cópia criada: (.+)/.exec(log)[1].trim();
+
+  const newDb = join(dir, 'novo.db');
+  execFileSync(process.execPath, ['--no-warnings', script('restore.mjs'), file, newDb], { encoding: 'utf8' });
+  const other = await startServer({ port: 0, dbPath: newDb, env });
+  try {
+    const url = `http://127.0.0.1:${other.server.address().port}`;
+    const login = await fetch(`${url}/api/admin/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: PASSWORD }) });
+    const c = login.headers.get('set-cookie').split(';')[0];
+    const after = await (await fetch(`${url}/api/admin/all`, { headers: { Cookie: c } })).json();
+    assert.deepEqual(after.guests, before.guests);
+    assert.deepEqual(after.settings, before.settings);
+    assert.deepEqual(after.gifts, before.gifts);
+    const media = new Uint8Array(await (await fetch(`${url}/media/${id}`)).arrayBuffer());
+    assert.deepEqual(media, bytes);
+  } finally {
+    other.server.closeAllConnections();
+    await new Promise((ok) => other.server.close(ok));
+    other.db.close();
+  }
+});
+
+test('restauro pela API (o mesmo caminho do painel)', async () => {
+  const data = await (await admin('backup/data')).json();
+  const before = (await adminJson('all')).guests.length;
+  assert.equal((await admin('restore/begin', 'POST', { confirm: 'nao' })).status, 400);
+  assert.equal((await admin('restore/begin', 'POST', { confirm: 'RESTAURAR' })).status, 200);
+  assert.equal((await adminJson('all')).guests.length, 0);
+  for (const [t, rows] of Object.entries(data.tables)) {
+    if (rows.length) assert.equal((await admin(`restore/table/${t}`, 'POST', { rows })).status, 200, t);
+  }
+  assert.equal((await adminJson('all')).guests.length, before);
+  assert.equal((await admin('restore/table/users', 'POST', { rows: [] })).status, 404);
+});
+
+test('migração da base Flask antiga', async () => {
+  const old = mkdtempSync(join(tmpdir(), 'flask-'));
+  const db = new DatabaseSync(join(old, 'database.db'));
+  db.exec(`CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT); CREATE TABLE events(id INTEGER PRIMARY KEY,time TEXT,title TEXT,location TEXT,description TEXT,map_url TEXT,order_index INT);
+    CREATE TABLE rsvps(id INTEGER PRIMARY KEY,nome TEXT,telefone TEXT,status TEXT,data_confirmacao TEXT,observacao TEXT);
+    CREATE TABLE messages(id INTEGER PRIMARY KEY,nome TEXT,relacao TEXT,mensagem TEXT,aprovado INT,oculto INT,data_criacao TEXT);
+    CREATE TABLE gallery(id INTEGER PRIMARY KEY,filename TEXT,is_main INT,order_index INT);
+    CREATE TABLE gift_categories(id INTEGER PRIMARY KEY,name TEXT,image TEXT,order_index INT);
+    CREATE TABLE gifts(id INTEGER PRIMARY KEY,category_id INT,name TEXT,description TEXT,image TEXT,available INT,chosen_by TEXT);
+    CREATE TABLE stores(id INTEGER PRIMARY KEY,name TEXT,description TEXT,address TEXT,image TEXT,phone TEXT,whatsapp TEXT,map_url TEXT,order_index INT);
+    INSERT INTO settings VALUES('couple_display','Casal Antigo'),('color_primary','#000000'),('cover_image','apagada.jpg');
+    INSERT INTO rsvps VALUES(1,'Carla','840','sim','2026-05-01 10:00:00','olá');
+    INSERT INTO messages VALUES(1,'Rui','Amigo','Parabéns',1,0,'2026-05-02');
+    INSERT INTO gallery VALUES(1,'f.jpg',1,1);`);
+  db.close();
+  const { mkdirSync } = await import('node:fs');
+  mkdirSync(join(old, 'static/images/gallery'), { recursive: true });
+  writeFileSync(join(old, 'static/images/gallery/f.jpg'), Buffer.alloc(2000, 9));
+  const script = fileURLToPath(new URL('../scripts/import-flask.mjs', import.meta.url));
+  const out = join(dir, 'migrado.json');
+  const log = execFileSync(process.execPath, ['--no-warnings', script, old, out], { encoding: 'utf8' });
+  assert.match(log, /apagada\.jpg/);
+  const data = JSON.parse(readFileSync(out, 'utf8'));
+  const get = (k) => data.tables.settings.find((r) => r.key === k).value;
+  assert.equal(get('couple_display'), 'Casal Antigo');
+  assert.notEqual(get('color_primary'), '#000000');
+  assert.equal(data.tables.guests[0].name, 'Carla');
+  assert.equal(data.tables.gallery[0].media_id, data.tables.media[0].id);
+  assert.equal(Buffer.from(data.files[0].data, 'base64').length, 2000);
+  rmSync(old, { recursive: true, force: true });
+});
+
+test('limite de pedidos: login bloqueia força bruta (último teste de login)', async () => {
+  let last;
+  for (let i = 0; i < 7; i++) last = await call('/api/admin/login', { body: { password: 'errada' } });
+  assert.equal(last.status, 429);
+});
+
+test('limite de pedidos: mensagens', async () => {
+  let last;
+  for (let i = 0; i < 7; i++) last = await call('/api/mensagem', { body: { nome: 'Spam Bot', mensagem: `m${i}` } });
+  assert.equal(last.status, 429);
+});

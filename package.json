@@ -1,0 +1,14 @@
+{
+  "name": "convite-casamento",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Convite de casamento digital sem dependências de execução.",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node --no-warnings server/local.mjs",
+    "test": "node --no-warnings --test tests/api.test.mjs",
+    "backup": "node --no-warnings scripts/backup.mjs",
+    "restore": "node --no-warnings scripts/restore.mjs"
+  }
+}

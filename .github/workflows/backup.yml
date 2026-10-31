@@ -1,0 +1,31 @@
+# Cópia diária fora da Cloudflare. Use apenas num repositório PRIVADO: a cópia tem dados pessoais.
+# Configurar em GitHub > Settings > Secrets and variables > Actions: SITE_URL e BACKUP_TOKEN.
+name: Cópia de segurança
+
+on:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Criar cópia
+        env:
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: node --no-warnings scripts/backup.mjs "$SITE_URL" backups
+      - uses: actions/upload-artifact@v4
+        with:
+          name: convite-backup
+          path: backups/
+          retention-days: 30
+          if-no-files-found: error
