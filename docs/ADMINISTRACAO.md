@@ -17,7 +17,11 @@ Há duas formas de confirmar:
 - **Link pessoal (recomendado):** adicione o convidado e envie o link pelo botão **WhatsApp** ou **Copiar link**. O convite mostra o nome e o limite de acompanhantes, e o convidado pode alterar a resposta até ao prazo. Só assim sabe quem ainda não respondeu.
 - **Link geral:** qualquer pessoa escreve o nome. Pode desligar em **Data e confirmações**.
 
-**Importar:** em **Importar lista**, cole do Excel uma linha por convidado, com as colunas Nome, Telefone, Grupo e Acompanhantes e, se quiser, Saudação e Mensagem pessoal.
+**Importar do Excel:** em **Convidados → Importar do Excel**, descarregue o modelo, preencha Nome, Telefone, Relação e Acompanhantes e carregue o ficheiro. A Saudação e a Mensagem são opcionais. Antes de gravar, o painel mostra quem é novo, quem será actualizado e os avisos. Importar de novo a mesma pessoa, com o mesmo telefone, mantém o link, a resposta e o registo de envio.
+
+**Modelos:** em **Modelos por relação**, edite os textos de cada nível de proximidade. O nome da relação no Excel tem de coincidir com o do modelo; se não coincidir, usa o modelo geral.
+
+**Enviar:** em **Enviar pelo WhatsApp**, escolha Save the Date ou Convite, reveja a pessoa, confirme e abra o WhatsApp. A mensagem vai pronta, mas é você quem carrega em enviar: o envio automático exige a API paga do WhatsApp. O registo indica que o WhatsApp foi aberto, não que a mensagem foi entregue.
 
 **Carta personalizada:** ao editar um convidado, preencha **Saudação** e **Mensagem pessoal**. Só esse convidado as vê, pelo link pessoal. Em branco, usa os textos gerais de **Carta e história**. Quem tiver o link pessoal consegue lê-las, por isso não escreva nada confidencial.
 
@@ -37,7 +41,7 @@ Atenção: um link pessoal permite ver e alterar a resposta desse convidado. Nã
 | Data e confirmações | Data, prazo, regras e agradecimentos |
 | Textos | Citação, convite formal, mensagem de partilha, rodapé |
 | Carta e história | Textos da carta de abertura, pétalas e passe, e capítulos com foto |
-| Save the Date | Foto, textos e mensagem. Envie em **Convidados → Save the Date**, ou partilhe o link geral `/guarde-a-data`. Usa o mesmo código pessoal do convite, por isso quem o recebe também pode chegar ao convite se souber o endereço |
+| Save the Date | Foto, textos e mensagem. Envie em **Enviar pelo WhatsApp**, ou partilhe o link geral `/guarde-a-data`. Usa o mesmo código pessoal do convite, por isso quem o recebe também pode chegar ao convite se souber o endereço |
 | Programa e locais | Momentos do dia; os locais alimentam a secção Localização |
 | Dress code, Galeria, Música, Presentes, Lojas, Informações | Conteúdos respectivos |
 | Secções e títulos | Mostrar, esconder e renomear cada parte do convite |

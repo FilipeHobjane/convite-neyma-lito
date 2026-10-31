@@ -1,10 +1,10 @@
 # Resultados dos testes (31/10/2026)
 
-## Automáticos: 33 de 33 aprovados em dois ambientes
+## Automáticos: 36 de 36 aprovados em dois ambientes
 
 Executados com `npm test` em Node 22.23.4 e, contra o motor oficial da Cloudflare, em `wrangler pages dev` 4.156.0 com D1 local.
 
-Cobrem: páginas e cabeçalhos de segurança, 404, travessia de pastas, RSVP, actualização sem duplicar, limite de acompanhantes, prazo, campo isca, XSS, SQL injection, mensagens, concorrência nos presentes, autenticação, sessão falsa ou expirada, origem externa, validação de definições, ficheiros em blocos, Range, eliminação, importação e exportação CSV, estatísticas, permissões do token de backup, cópia e recuperação com ficheiros idênticos, restauro por API, migração Flask, actualização de bases da versão anterior, carta pessoal, capítulos, Save the Date sem dados a mais e limites de pedidos.
+Cobrem: páginas e cabeçalhos de segurança, 404, travessia de pastas, RSVP, actualização sem duplicar, limite de acompanhantes, prazo, campo isca, XSS, SQL injection, mensagens, concorrência nos presentes, autenticação, sessão falsa ou expirada, origem externa, validação de definições, ficheiros em blocos, Range, eliminação, importação e exportação CSV, estatísticas, permissões do token de backup, cópia e recuperação com ficheiros idênticos, restauro por API, migração Flask, actualização de bases da versão anterior, carta pessoal, capítulos, Save the Date sem dados a mais, modelos por relação, nova importação sem duplicar, registo de envio e limites de pedidos.
 
 A actualização de uma base criada pela versão anterior também foi executada em `wrangler pages dev` com D1 local: o convidado manteve-se e a nova versão gravou capítulos.
 
@@ -28,6 +28,8 @@ A execução na Cloudflare encontrou um defeito que o Node não mostrava (foto e
 | Selo, carta, capítulos, pétalas, passe e imagem do passe | OK a 375 px; a vibração e a partilha da imagem precisam de telemóvel real |
 | Painel: Carta e história, saudação e mensagem do convidado | OK a 375 px |
 | Save the Date: raspar, foto, data, pétalas e contagem | OK a 375 px com gestos simulados; raspar com o dedo e abrir o ficheiro da agenda precisam de telemóvel real |
+| Excel: modelo aberto no Excel 16, preenchido e guardado, depois importado com acentos e telefones em vários formatos | OK |
+| Enviar: botão bloqueado sem confirmação, mensagem e número correctos, registo de abertura | OK sem abrir o WhatsApp real |
 | Erros na consola | Só os 401/404 esperados dos próprios testes |
 | Pacotes externos | Nenhum, logo sem vulnerabilidades de dependências |
 | Ligações externas no código | Apenas wa.me e Google Maps |

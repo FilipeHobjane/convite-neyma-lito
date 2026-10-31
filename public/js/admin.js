@@ -147,7 +147,7 @@
       h('h2', null, isNew ? 'Novo convidado' : 'Editar convidado'),
       h('div', { class: 'grid two' },
         field({ k: 'name', l: 'Nome' }, v), field({ k: 'phone', l: 'Telefone', ph: '+258…' }, v),
-        field({ k: 'group_name', l: 'Grupo', ph: 'Família, amigos…' }, v),
+        field({ k: 'group_name', l: 'Relação (define o modelo)', t: 'select', options: [...new Set(['', ...templates().slice(0, -1).map((t) => t.label), v.group_name || ''])].map((x) => [x, x || 'Sem relação']) }, v),
         field({ k: 'max_companions', l: 'Acompanhantes autorizados', t: 'number', min: 0, max: 50 }, v),
         field({ k: 'status', l: 'Estado', t: 'select', options: Object.entries(STATUS) }, v),
         field({ k: 'companions', l: 'Acompanhantes confirmados', t: 'number', min: 0, max: 50 }, v)),
@@ -166,22 +166,219 @@
     dlg.showModal();
   }
 
+  // ---------- Modelos, telefones e mensagens ----------
+  const templates = () => { try { return JSON.parse(D.settings.relation_templates || '[]'); } catch { return []; } };
+  const knownRelation = (name) => templates().slice(0, -1).find((t) => fold(t.label).trim() === fold(name).trim());
+  const templateFor = (g) => knownRelation(g.group_name) || templates().slice(-1)[0] || {};
+  const firstName = (n) => (n || '').trim().split(/\s+/)[0] || '';
+  // Número internacional só com dígitos. Em Moçambique, 9 dígitos a começar por 8 ganham o 258.
+  function phoneDigits(raw) {
+    let d = String(raw || '').replace(/\.0+$/, '').replace(/\D/g, '').replace(/^00/, '');
+    if (/^8\d{8}$/.test(d)) d = `258${d}`;
+    return /^[1-9]\d{9,14}$/.test(d) ? d : '';
+  }
+  const prettyDate = () => {
+    const [y, m, d] = (D.settings.wedding_date || '').split('-').map(Number);
+    return d ? `${d}/${String(m).padStart(2, '0')}/${y}` : '';
+  };
+  const fillText = (text, g, link) => String(text || '')
+    .replace(/\{nome\}/g, () => g.name).replace(/\{primeiro_nome\}/g, () => firstName(g.name))
+    .replace(/\{casal\}/g, () => D.settings.couple_display).replace(/\{data\}/g, () => prettyDate()).replace(/\{link\}/g, () => link);
+  const SEND = {
+    savedate: { label: 'Save the Date', col: 'savedate_sent_at', waKey: 'wa_savedate', fallback: 'std_share_message', link: (g) => `${location.origin}/guarde-a-data/${g.token}` },
+    invite: { label: 'Convite', col: 'invite_sent_at', waKey: 'wa_invite', fallback: 'share_message', link: guestLink },
+  };
+  function sendMessage(g, kind) {
+    const k = SEND[kind];
+    const link = k.link(g);
+    const text = templateFor(g)[k.waKey] || `{nome}, ${D.settings[k.fallback]}\n\n{link}`;
+    const out = fillText(text, g, link);
+    return out.includes(link) ? out : `${out}\n\n${link}`;
+  }
+
+  // ---------- Enviar: rever cada pessoa antes de abrir o WhatsApp ----------
+  function sendDialog(g, kind, queue = []) {
+    const k = SEND[kind];
+    const tpl = templateFor(g);
+    const digits = phoneDigits(g.phone);
+    const dlg = h('dialog', { class: 'send' });
+    const close = () => { dlg.close(); dlg.remove(); load(); };
+    const text = h('textarea', { rows: 6, value: sendMessage(g, kind), 'aria-label': 'Mensagem do WhatsApp', oninput: () => sync() });
+    const confirmBox = h('input', { type: 'checkbox', onchange: () => sync() });
+    const wa = h('a', { class: 'btn wa', target: '_blank', rel: 'noopener' }, 'Abrir no WhatsApp');
+    const done = h('p', { class: 'notice', hidden: true }, 'WhatsApp aberto e registado aqui. Confirme lá que a mensagem foi enviada: o painel não consegue vê-lo.');
+    const next = queue.find((x) => x.id !== g.id);
+    const nextBtn = next ? h('button', { class: 'btn', type: 'button', hidden: true, onclick: () => { dlg.close(); dlg.remove(); sendDialog(next, kind, queue.filter((x) => x.id !== g.id)); } }, `Seguinte: ${next.name}`) : null;
+    function sync() {
+      const ready = confirmBox.checked && digits && text.value.trim();
+      wa.classList.toggle('off', !ready);
+      wa.setAttribute('aria-disabled', ready ? 'false' : 'true');
+      wa.href = ready ? `https://wa.me/${digits}?text=${encodeURIComponent(text.value)}` : '#';
+    }
+    wa.addEventListener('click', async (e) => {
+      if (wa.classList.contains('off')) { e.preventDefault(); return; }
+      done.hidden = false;
+      if (nextBtn) nextBtn.hidden = false;
+      try { await api(`guests/${g.id}/sent`, 'POST', { kind }); g[k.col] = new Date().toISOString(); } catch (ex) { toast(ex.message, true); }
+    });
+    sync();
+    dlg.append(
+      h('h2', null, `Enviar ${k.label} a ${g.name}`),
+      g[k.col] ? h('p', { class: 'notice' }, `Atenção: já foi aberto no WhatsApp para esta pessoa em ${fmtDate(g[k.col])}.`) : null,
+      digits ? null : h('p', { class: 'err' }, `O telefone "${g.phone || 'em falta'}" não é válido. Corrija-o em Convidados antes de enviar.`),
+      h('dl', { class: 'facts' },
+        h('div', null, h('dt', null, 'Nome'), h('dd', null, g.name)),
+        h('div', null, h('dt', null, 'WhatsApp'), h('dd', null, digits ? `+${digits}` : '-')),
+        h('div', null, h('dt', null, 'Relação'), h('dd', null, g.group_name || 'Sem relação')),
+        h('div', null, h('dt', null, 'Modelo usado'), h('dd', null, tpl.label || '-')),
+        h('div', null, h('dt', null, 'Acompanhantes'), h('dd', null, g.max_companions))),
+      h('h3', null, 'O que a pessoa vai ver'),
+      h('div', { class: 'card-preview' },
+        tpl.cover_line ? h('small', null, fillText(tpl.cover_line, g, '')) : null,
+        h('strong', null, g.name),
+        kind === 'invite' ? [
+          h('p', { class: 'hello' }, g.salutation || fillText(tpl.salutation, g, '') || fillText(D.settings.letter_greeting_personal, g, '').replace('{nome}', g.name)),
+          h('p', null, g.personal_message || fillText(tpl.message, g, '') || D.settings.letter_message),
+        ] : h('p', null, D.settings.std_message)),
+      h('p', { class: 'row space' }, h('a', { href: k.link(g), target: '_blank', rel: 'noopener' }, 'Abrir como este convidado')),
+      h('h3', { class: 'space' }, 'Mensagem do WhatsApp'),
+      text,
+      h('label', { class: 'check space' }, confirmBox, `Confirmo que quero enviar a ${g.name} e que os dados acima identificam esta pessoa.`),
+      done,
+      h('div', { class: 'row end space' }, h('button', { class: 'btn alt', type: 'button', onclick: close }, 'Fechar'), wa, nextBtn));
+    document.body.append(dlg);
+    dlg.showModal();
+  }
+
+  let sendFilter = { kind: 'savedate', relation: '', pending: true };
+  function viewSend() {
+    const k = SEND[sendFilter.kind];
+    const all = D.guests;
+    const shown = all.filter((g) => (!sendFilter.relation || (g.group_name || '') === sendFilter.relation) && (!sendFilter.pending || !g[k.col]));
+    const queue = shown.filter((g) => phoneDigits(g.phone));
+    const relations = [...new Set(all.map((g) => g.group_name || ''))].sort();
+    const redraw = () => render();
+    return [
+      h('h1', null, 'Enviar pelo WhatsApp'),
+      h('div', { class: 'card' },
+        h('div', { class: 'grid two' },
+          h('label', { class: 'f' }, h('span', null, 'O que enviar'), h('select', { onchange: (e) => { sendFilter.kind = e.target.value; redraw(); } },
+            Object.entries(SEND).map(([v, x]) => h('option', { value: v, selected: sendFilter.kind === v }, x.label)))),
+          h('label', { class: 'f' }, h('span', null, 'Relação'), h('select', { onchange: (e) => { sendFilter.relation = e.target.value; redraw(); } },
+            h('option', { value: '' }, 'Todas'), relations.filter(Boolean).map((r) => h('option', { value: r, selected: sendFilter.relation === r }, r))))),
+        h('label', { class: 'check space' }, h('input', { type: 'checkbox', checked: sendFilter.pending, onchange: (e) => { sendFilter.pending = e.target.checked; redraw(); } }), 'Mostrar só quem ainda não recebeu'),
+        h('p', { class: 'muted' }, `${all.filter((g) => g[k.col]).length} de ${all.length} já abertos no WhatsApp. O WhatsApp não permite envio automático gratuito: cada mensagem abre pronta e é você quem carrega em enviar.`),
+        queue.length ? h('button', { class: 'btn space', type: 'button', onclick: () => sendDialog(queue[0], sendFilter.kind, queue.slice(1)) }, `Começar por ${queue[0].name} (${queue.length} na fila)`) : null),
+      h('div', { class: 'card' }, h('table', { class: 'tbl cards' },
+        h('thead', null, h('tr', null, ['Convidado', 'Relação e modelo', k.label, ''].map((t) => h('th', null, t)))),
+        h('tbody', null, shown.length ? shown.map((g) => h('tr', null,
+          h('td', null, h('strong', null, g.name), h('div', { class: phoneDigits(g.phone) ? 'muted' : 'dup' }, phoneDigits(g.phone) ? `+${phoneDigits(g.phone)}` : 'Telefone em falta ou inválido')),
+          h('td', null, g.group_name || 'Sem relação', h('div', { class: 'muted' }, `Modelo: ${templateFor(g).label || '-'}`)),
+          h('td', null, g[k.col] ? h('span', { class: 'tag sim' }, `Aberto ${fmtDate(g[k.col])}`) : h('span', { class: 'tag pendente' }, 'Por enviar')),
+          h('td', null, h('div', { class: 'row' },
+            h('button', { class: 'btn sm', type: 'button', onclick: () => sendDialog(g, sendFilter.kind) }, 'Rever e enviar'),
+            g[k.col] ? h('button', { class: 'btn alt sm', type: 'button', onclick: () => act(() => api(`guests/${g.id}/sent`, 'POST', { kind: sendFilter.kind, undo: true }), 'Marcado como não enviado.') }, 'Desmarcar') : null))))
+          : h('tr', null, h('td', { colSpan: 4, class: 'muted' }, 'Ninguém nesta lista.'))))),
+    ];
+  }
+
+  // ---------- Importar do Excel ----------
+  const IMPORT_FIELDS = { name: /^(nome|convidado)/, phone: /^(telefone|telemovel|numero|whatsapp|contacto|celular)/, group_name: /^(relacao|grupo|proximidade|nivel|o que)/, max_companions: /^acompanhante/, salutation: /^(saudacao|tratamento)/, personal_message: /^mensagem/ };
+  function rowsToGuests(table) {
+    const head = (table[0] || []).map((c) => fold(c).trim());
+    const hasHead = head.some((c) => IMPORT_FIELDS.name.test(c));
+    const order = hasHead ? Object.fromEntries(Object.entries(IMPORT_FIELDS).map(([k, re]) => [k, head.findIndex((c) => re.test(c))])) : { name: 0, phone: 1, group_name: 2, max_companions: 3, salutation: 4, personal_message: 5 };
+    return (hasHead ? table.slice(1) : table).map((r) => {
+      const get = (k) => (order[k] >= 0 ? r[order[k]] || '' : '');
+      const raw = get('phone');
+      const digits = phoneDigits(raw);
+      const companions = Number(get('max_companions') || 0);
+      return { name: get('name'), phone: digits ? `+${digits}` : raw, rawOk: Boolean(digits), group_name: get('group_name'), max_companions: Number.isFinite(companions) ? Math.max(0, Math.floor(companions)) : 0, salutation: get('salutation'), personal_message: get('personal_message') };
+    }).filter((g) => g.name || g.phone);
+  }
+  function importPreview(rows) {
+    const seen = new Set();
+    const old = D.guests.map((g) => ({ name: fold(g.name), phone: phoneDigits(g.phone) }));
+    const items = rows.map((g) => {
+      const problems = [];
+      const key = `${fold(g.name)}|${phoneDigits(g.phone)}`;
+      if (g.name.trim().length < 2) problems.push('Sem nome: não será importado');
+      if (!g.rawOk) problems.push(g.phone ? 'Telefone inválido' : 'Sem telefone');
+      if (!knownRelation(g.group_name)) problems.push(g.group_name ? `Relação "${g.group_name}" desconhecida: usa o modelo geral` : 'Sem relação: usa o modelo geral');
+      if (seen.has(key)) problems.push('Linha repetida no ficheiro');
+      seen.add(key);
+      const digits = phoneDigits(g.phone);
+      const exists = old.some((o) => (digits && o.phone === digits) || (o.name === fold(g.name) && (!digits || !o.phone || o.phone === digits)));
+      return { g, problems, exists };
+    });
+    const valid = items.filter((i) => i.g.name.trim().length >= 2);
+    const dlg = h('dialog', { class: 'wide' });
+    const close = () => { dlg.close(); dlg.remove(); };
+    dlg.append(
+      h('h2', null, 'Confirmar a importação'),
+      h('p', { class: 'muted' }, `${valid.filter((i) => !i.exists).length} novo(s), ${valid.filter((i) => i.exists).length} a actualizar, ${items.filter((i) => i.problems.length).length} com avisos. Quem já existe mantém o link, a resposta e o registo de envio.`),
+      h('div', { class: 'scroll' }, h('table', { class: 'tbl' },
+        h('thead', null, h('tr', null, ['Nome', 'Telefone', 'Relação', 'Acomp.', 'Estado'].map((t) => h('th', null, t)))),
+        h('tbody', null, items.map((i) => h('tr', null,
+          h('td', null, i.g.name || '-'), h('td', null, i.g.phone || '-'), h('td', null, i.g.group_name || '-'), h('td', null, i.g.max_companions),
+          h('td', null, h('span', { class: `tag ${i.exists ? 'pendente' : 'sim'}` }, i.exists ? 'Actualizar' : 'Novo'), i.problems.map((p) => h('div', { class: 'dup' }, p)))))))),
+      h('div', { class: 'row end space' },
+        h('button', { class: 'btn alt', type: 'button', onclick: close }, 'Cancelar'),
+        h('button', {
+          class: 'btn', type: 'button', disabled: !valid.length,
+          onclick: async () => {
+            close();
+            try {
+              const out = await api('guests/import', 'POST', { rows: valid.map((i) => i.g) });
+              toast(`${out.imported} novo(s) e ${out.updated} actualizado(s).`);
+              await load();
+            } catch (ex) { toast(ex.message, true); }
+          },
+        }, `Importar ${valid.length} convidado(s)`)));
+    document.body.append(dlg);
+    dlg.showModal();
+  }
+  function downloadModel() {
+    const labels = templates().slice(0, -1).map((t) => t.label);
+    const blob = window.Excel.createModel([
+      ['Nome', 'Telefone', 'Relação', 'Acompanhantes', 'Saudação (opcional)', 'Mensagem (opcional)'],
+      ['Ana Macuácua (exemplo: apague esta linha)', '841234567', labels[0] || 'Família', '1', 'Querida tia Ana,', 'Os seus almoços de domingo fizeram de nós uma família.'],
+    ], { relationColumn: 2, relations: labels }, [34, 18, 22, 15, 26, 60]);
+    const a = h('a', { href: URL.createObjectURL(blob), download: 'modelo-convidados.xlsx' });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
   function importDialog() {
     const dlg = h('dialog');
-    const area = h('textarea', { rows: 9, placeholder: 'João Macuácua; +258 84 000 0000; Família; 1\nMaria Sitoe; ; Amigos; 0' });
-    dlg.append(h('form', {
-      onsubmit: (e) => {
-        e.preventDefault();
-        const rows = area.value.split(/\r?\n/).map((l) => l.split(/[;\t]/).map((x) => x.trim())).filter((c) => c[0])
-          .map(([name, phone, group_name, max_companions, salutation, ...rest]) => ({ name, phone, group_name, max_companions, salutation, personal_message: rest.join('; ') }));
-        dlg.close(); dlg.remove();
-        act(() => api('guests/import', 'POST', { rows }), `${rows.length} linha(s) importada(s).`);
-      },
-    },
-      h('h2', null, 'Importar lista de convidados'),
-      h('p', { class: 'muted' }, 'Cole uma linha por convidado: Nome; Telefone; Grupo; Nº de acompanhantes; Saudação; Mensagem pessoal. As duas últimas são opcionais. Pode copiar directamente do Excel.'),
-      area,
-      h('div', { class: 'row end space' }, h('button', { class: 'btn alt', type: 'button', onclick: () => { dlg.close(); dlg.remove(); } }, 'Cancelar'), h('button', { class: 'btn' }, 'Importar'))));
+    const close = () => { dlg.close(); dlg.remove(); };
+    const err = h('p', { class: 'err', role: 'alert' });
+    const area = h('textarea', { rows: 5, placeholder: 'João Macuácua; 841234567; Família; 1\nMaria Sitoe; 871234567; Amigos; 0' });
+    const go = (table) => {
+      const rows = rowsToGuests(table);
+      if (!rows.length) { err.textContent = 'Não foram encontrados convidados. Confirme que a primeira coluna tem o nome.'; return; }
+      close();
+      importPreview(rows);
+    };
+    dlg.append(
+      h('h2', null, 'Importar do Excel'),
+      h('ol', { class: 'steps' },
+        h('li', null, 'Descarregue o modelo e preencha uma linha por convidado.'),
+        h('li', null, 'Na coluna Relação, escolha o nível de proximidade: é ela que define o texto.'),
+        h('li', null, 'Carregue o ficheiro aqui e confirme a lista antes de importar.')),
+      h('div', { class: 'row space' },
+        h('button', { class: 'btn alt', type: 'button', onclick: downloadModel }, 'Descarregar modelo'),
+        h('label', { class: 'btn file' }, 'Escolher ficheiro Excel', h('input', {
+          type: 'file', accept: '.xlsx,.csv,.txt',
+          onchange: async (e) => {
+            err.textContent = '';
+            try { if (e.target.files[0]) go(await window.Excel.readFile(e.target.files[0])); } catch (ex) { err.textContent = ex.message; }
+          },
+        }))),
+      err,
+      h('details', { class: 'space' }, h('summary', null, 'Ou colar uma lista'),
+        h('p', { class: 'muted' }, 'Nome; Telefone; Relação; Acompanhantes; Saudação; Mensagem'), area,
+        h('button', { class: 'btn alt space', type: 'button', onclick: () => go(window.Excel.readText(area.value)) }, 'Rever a lista')),
+      h('div', { class: 'row end space' }, h('button', { class: 'btn alt', type: 'button', onclick: close }, 'Cancelar')));
     document.body.append(dlg);
     dlg.showModal();
   }
@@ -202,8 +399,8 @@
           h('div', { class: 'row' },
             h('button', { class: 'btn alt sm', type: 'button', onclick: () => guestDialog(g) }, 'Editar'),
             h('button', { class: 'btn alt sm', type: 'button', onclick: () => navigator.clipboard.writeText(guestLink(g)).then(() => toast('Link copiado.')) }, 'Copiar link'),
-            h('a', { class: 'btn alt sm', target: '_blank', rel: 'noopener', href: `https://wa.me/${(g.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`${g.name}, ${D.settings.share_message}\n\n${guestLink(g)}`)}` }, 'WhatsApp'),
-            h('a', { class: 'btn alt sm', target: '_blank', rel: 'noopener', href: `https://wa.me/${(g.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`${g.name}, ${D.settings.std_share_message}\n\n${location.origin}/guarde-a-data/${g.token}`)}` }, 'Save the Date'),
+            h('button', { class: 'btn alt sm', type: 'button', onclick: () => sendDialog(g, 'invite') }, 'Enviar convite'),
+            h('button', { class: 'btn alt sm', type: 'button', onclick: () => sendDialog(g, 'savedate') }, 'Enviar Save the Date'),
             h('button', { class: 'btn bad sm', type: 'button', onclick: () => { if (confirm(`Eliminar ${g.name}?`)) act(() => api(`guests/${g.id}`, 'DELETE'), 'Eliminado.'); } }, 'Eliminar'))))));
       if (!list.length) tbody.append(h('tr', null, h('td', { colSpan: 4, class: 'muted' }, 'Nenhum convidado encontrado.')));
     };
@@ -213,7 +410,7 @@
       h('div', { class: 'card' },
         h('div', { class: 'row' },
           h('button', { class: 'btn', type: 'button', onclick: () => guestDialog(null) }, 'Novo convidado'),
-          h('button', { class: 'btn alt', type: 'button', onclick: importDialog }, 'Importar lista'),
+          h('button', { class: 'btn alt', type: 'button', onclick: importDialog }, 'Importar do Excel'),
           h('a', { class: 'btn alt', href: '/api/admin/export/guests.csv' }, 'Exportar para Excel (CSV)')),
         h('div', { class: 'grid two space' },
           h('label', { class: 'f' }, h('span', null, 'Pesquisar'), h('input', { type: 'search', value: guestFilter.q, oninput: (e) => { guestFilter.q = e.target.value; draw(); } })),
@@ -276,6 +473,29 @@
       ];
     }],
     convidados: ['Convidados', viewGuests],
+    enviar: ['Enviar pelo WhatsApp', viewSend],
+    modelos: ['Modelos por relação', () => {
+      const list = templates();
+      const box = h('div', { class: 'list' });
+      const fields = [['label', 'Relação (o nome usado no Excel)'], ['cover_line', 'Frase por cima do nome no envelope'], ['salutation', 'Saudação da carta'], ['message', 'Mensagem da carta', 3], ['wa_savedate', 'WhatsApp: Save the Date', 4], ['wa_invite', 'WhatsApp: convite', 4]];
+      const addRow = (t, isGeneral) => box.append(h('div', { class: 'tpl' },
+        h('div', { class: 'grid two' }, fields.map(([k, l, rows]) => h('label', { class: 'f' }, h('span', null, l),
+          rows ? h('textarea', { rows, value: t[k] || '', 'data-k': k }) : h('input', { value: t[k] || '', 'data-k': k, readOnly: isGeneral && k === 'label' })))),
+        isGeneral ? h('p', { class: 'muted space' }, 'Modelo geral: usado por quem não tem relação reconhecida. Em branco, valem os textos gerais de Carta e história e de Save the Date.')
+          : h('button', { class: 'btn bad sm space', type: 'button', onclick: (e) => e.target.closest('.tpl').remove() }, 'Remover')));
+      list.forEach((t, i) => addRow(t, i === list.length - 1));
+      const read = () => [...box.children].map((row) => Object.fromEntries([...row.querySelectorAll('[data-k]')].map((el) => [el.dataset.k, el.value])));
+      return [
+        h('h1', null, 'Modelos por relação'),
+        h('p', { class: 'muted' }, 'Cada convidado recebe o texto do nível de proximidade indicado no Excel. Pode usar {nome}, {primeiro_nome}, {casal}, {data} e {link}. A saudação e a mensagem de um convidado, se existirem, têm prioridade.'),
+        h('form', {
+          class: 'card',
+          onsubmit: (e) => { e.preventDefault(); act(() => api('settings', 'PUT', { relation_templates: JSON.stringify(read()) }), 'Modelos guardados.'); },
+        }, box, h('div', { class: 'row space' },
+          h('button', { class: 'btn alt', type: 'button', onclick: () => { const rows = read(); const general = box.lastElementChild; addRow({ label: `Nova relação ${rows.length}` }, false); box.insertBefore(box.lastElementChild, general); } }, 'Acrescentar relação'),
+          h('button', { class: 'btn' }, 'Guardar modelos'))),
+      ];
+    }],
     mensagens: ['Mensagens', () => [
       h('h1', null, 'Mensagens'),
       h('div', { class: 'card list' }, D.messages.length ? D.messages.map((m) => h('div', null,
@@ -351,15 +571,15 @@
       h('h1', null, 'Save the Date'),
       h('div', { class: 'card' }, h('h2', null, 'Link geral'),
         h('p', null, h('a', { href: '/guarde-a-data', target: '_blank', rel: 'noopener' }, `${location.origin}/guarde-a-data`)),
-        h('p', { class: 'muted' }, 'Para mostrar o nome de cada pessoa, use o botão Save the Date em Convidados. A data é a de Data e confirmações.')),
+        h('p', { class: 'muted' }, 'Para mostrar o nome de cada pessoa, envie por Enviar pelo WhatsApp. A data é a de Data e confirmações.')),
       h('div', { class: 'card' }, h('h2', null, 'Fotografia'),
         imageSetting('Aparece ao raspar. Ao alto fica melhor, com os rostos a meio ou acima do meio. Sem foto, usa a capa do convite.', 'std_photo')),
       settingsForm('Textos', [
         { k: 'show_savedate', l: 'Save the Date activo (desligado, os links abrem o convite)', t: 'check' },
-        { k: 'std_eyebrow', l: 'Título' }, { k: 'std_hint', l: 'Instrução para raspar' },
+        { k: 'std_title', l: 'Título (aparece em maiúsculas)' }, { k: 'std_hint', l: 'Instrução para raspar' },
         { k: 'std_message', l: 'Frase depois de raspar', t: 'area', rows: 2 },
         { k: 'std_next', l: 'Aviso sobre o convite', t: 'area', rows: 2 },
-        { k: 'std_share_message', l: 'Mensagem no WhatsApp', t: 'area', rows: 2 },
+        { k: 'std_share_message', l: 'Mensagem no WhatsApp para quem não tem modelo próprio', t: 'area', rows: 2 },
       ]),
     ]],
     programa: ['Programa e locais', () => [

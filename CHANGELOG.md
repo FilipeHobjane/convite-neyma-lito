@@ -1,5 +1,12 @@
 # Registo de alterações
 
+## 2.4.0 (31/10/2026)
+
+- Save the Date: título SAVE THE DATE em maiúsculas douradas.
+- Importação de ficheiros Excel (.xlsx), com modelo para descarregar e lista para confirmar. Importar de novo actualiza a mesma pessoa e mantém o link.
+- Modelos por relação: frase do envelope, saudação, carta e mensagens do WhatsApp, editáveis no painel.
+- **Enviar pelo WhatsApp**: rever cada pessoa, confirmar, abrir a mensagem pronta e registar. Fila para seguir para o convidado seguinte.
+
 ## 2.3.0 (31/10/2026)
 
 - Save the Date em `/guarde-a-data`: folha dourada para raspar, foto dos noivos, pétalas, contagem e agenda.

@@ -67,8 +67,12 @@
     h('button', { class: 'link', type: 'button', onclick: () => finish() }, 'Mostrar a data sem raspar'));
   const names = [firstName(s.bride_name), firstName(s.groom_name)];
   app.append(h('main', { class: 'arch' },
-    h('div', null, h('p', { class: 'eyebrow' }, s.std_eyebrow), guest ? h('p', { class: 'to' }, `Para ${guest.name}`) : null),
-    h('h1', { class: 'names' }, names[0], h('i', null, '&'), names[1]),
+    h('div', null,
+      h('h1', { class: 'title' }, s.std_title),
+      h('div', { class: 'title-rule' }, h('i')),
+      guest && guest.cover_line ? h('p', { class: 'line-to' }, guest.cover_line) : null,
+      guest ? h('p', { class: 'to' }, guest.cover_line ? guest.name : `Para ${guest.name}`) : null),
+    h('p', { class: 'names' }, names[0], h('i', null, '&'), names[1]),
     ticket, before, after));
 
   // ---------- Folha dourada ----------

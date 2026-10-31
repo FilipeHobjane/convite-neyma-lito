@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '4';
+export const SCHEMA_VERSION = '5';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -22,7 +22,9 @@ export const SCHEMA = [
      responded_at TEXT,
      created_at TEXT NOT NULL,
      salutation TEXT DEFAULT '',
-     personal_message TEXT DEFAULT '')`,
+     personal_message TEXT DEFAULT '',
+     savedate_sent_at TEXT,
+     invite_sent_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_guests_status ON guests(status)`,
   `CREATE TABLE IF NOT EXISTS chapters (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, title TEXT NOT NULL, text TEXT, image TEXT DEFAULT '', order_index INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, relacao TEXT, mensagem TEXT NOT NULL, aprovado INTEGER DEFAULT 0, oculto INTEGER DEFAULT 0, data_criacao TEXT)`,
@@ -41,6 +43,8 @@ export const SCHEMA = [
 export const COLUMN_MIGRATIONS = [
   `ALTER TABLE guests ADD COLUMN salutation TEXT DEFAULT ''`,
   `ALTER TABLE guests ADD COLUMN personal_message TEXT DEFAULT ''`,
+  `ALTER TABLE guests ADD COLUMN savedate_sent_at TEXT`,
+  `ALTER TABLE guests ADD COLUMN invite_sent_at TEXT`,
 ];
 
 // Secções do convite: a chave dá os nomes eyebrow, title e show nas definições.
@@ -66,7 +70,7 @@ const SECTION_SETTINGS = Object.fromEntries(Object.entries(SECTIONS).flatMap(([k
 export const BACKUP_TABLES = {
   settings: ['key', 'value'],
   events: ['id', 'time', 'title', 'location', 'description', 'map_url', 'order_index'],
-  guests: ['id', 'token', 'name', 'phone', 'group_name', 'max_companions', 'status', 'companions', 'companion_names', 'notes', 'admin_notes', 'source', 'responded_at', 'created_at', 'salutation', 'personal_message'],
+  guests: ['id', 'token', 'name', 'phone', 'group_name', 'max_companions', 'status', 'companions', 'companion_names', 'notes', 'admin_notes', 'source', 'responded_at', 'created_at', 'salutation', 'personal_message', 'savedate_sent_at', 'invite_sent_at'],
   chapters: ['id', 'label', 'title', 'text', 'image', 'order_index'],
   messages: ['id', 'nome', 'relacao', 'mensagem', 'aprovado', 'oculto', 'data_criacao'],
   gallery: ['id', 'media_id', 'thumb_id', 'is_main', 'order_index'],
@@ -94,6 +98,25 @@ export const FONT_OPTIONS = {
   titles: ["'Cormorant Garamond', serif", "'Playfair Display', serif", "'Marcellus', serif"],
   text: ["'Jost', sans-serif", "'Lato', sans-serif", "'Cormorant Garamond', serif"],
 };
+
+// Modelos por nível de proximidade. O último serve quem não tem relação reconhecida.
+// {nome}, {primeiro_nome}, {casal}, {data} e {link} são substituídos ao usar o modelo.
+const TEMPLATE = (label, cover_line, salutation, message, wa_savedate, wa_invite) => ({ label, cover_line, salutation, message, wa_savedate, wa_invite });
+export const DEFAULT_TEMPLATES = [
+  TEMPLATE('Família próxima', 'Para a nossa família', 'Querido(a) {primeiro_nome},', 'Crescemos convosco e é convosco que queremos viver este dia. Sem vocês não seria a mesma coisa.',
+    '{primeiro_nome}, temos uma notícia muito especial para partilhar consigo primeiro. Raspe o dourado:\n\n{link}', '{primeiro_nome}, chegou o convite do nosso casamento, feito a pensar em si. Com todo o nosso carinho,\n{casal}\n\n{link}'),
+  TEMPLATE('Família', 'Para a nossa família', 'Querido(a) {nome},', 'A família é o nosso começo. Ficaremos muito felizes por celebrar este dia consigo.',
+    '{nome}, temos uma novidade para a família. Raspe o dourado e descubra a data:\n\n{link}', '{nome}, é com muita alegria que lhe enviamos o convite do nosso casamento.\n{casal}\n\n{link}'),
+  TEMPLATE('Padrinhos', 'Para os nossos padrinhos', 'Querido(a) {primeiro_nome},', 'Escolhemos-vos para caminhar ao nosso lado. Este dia também é vosso.',
+    '{primeiro_nome}, antes de todos, queremos que guarde esta data. Raspe o dourado:\n\n{link}', '{primeiro_nome}, aqui está o convite do nosso casamento. Obrigado por estar ao nosso lado.\n{casal}\n\n{link}'),
+  TEMPLATE('Amigos próximos', 'Para quem é família por escolha', '{primeiro_nome},', 'Estiveste nas noites longas e nas gargalhadas mais altas. Agora queremos dançar contigo.',
+    '{primeiro_nome}! Tenho uma coisa para ti: raspa o dourado e reserva já esta data 😄\n\n{link}', '{primeiro_nome}, chegou o convite! Não aceitamos um não como resposta 😄\n{casal}\n\n{link}'),
+  TEMPLATE('Amigos', 'Para os nossos amigos', 'Querido(a) {primeiro_nome},', 'Ficaremos muito felizes por celebrar este dia contigo.',
+    '{primeiro_nome}, temos uma novidade! Raspa o dourado e descobre a data:\n\n{link}', '{primeiro_nome}, é com alegria que te enviamos o convite do nosso casamento.\n{casal}\n\n{link}'),
+  TEMPLATE('Colegas', 'Com estima', 'Estimado(a) {nome},', 'Seria uma grande alegria contar com a sua presença neste dia tão importante para nós.',
+    '{nome}, gostaríamos de partilhar uma novidade consigo. Raspe o dourado e descubra a data:\n\n{link}', '{nome}, temos o prazer de lhe enviar o convite do nosso casamento.\n{casal}\n\n{link}'),
+  TEMPLATE('Outros', '', '', '', '', ''),
+];
 
 export const DEFAULT_SETTINGS = {
   bride_name: 'Nelde Alberto Fumo',
@@ -170,7 +193,8 @@ export const DEFAULT_SETTINGS = {
   letter_message: 'Este dia não seria o mesmo sem si. Ficaremos muito felizes por celebrá-lo consigo.',
   show_savedate: '1',
   std_photo: '',
-  std_eyebrow: 'Guarde esta data',
+  std_title: 'Save the Date',
+  relation_templates: JSON.stringify(DEFAULT_TEMPLATES),
   std_hint: 'Raspe o dourado com o dedo para descobrir',
   std_message: 'Vamos casar, e este dia só fica completo consigo.',
   std_next: 'O convite, com o programa e o local, segue em breve.',

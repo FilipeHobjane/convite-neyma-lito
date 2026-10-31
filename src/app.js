@@ -63,11 +63,24 @@ function deadlineInfo(s) {
   return { open: Date.now() <= end, deadline: s.rsvp_deadline, tz };
 }
 
-function publicGuest(g) {
-  return g && {
+const foldText = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+
+// O modelo fica no servidor: cada convidado só recebe o texto já preenchido do seu nível.
+function guestTemplate(g, s) {
+  let list = [];
+  try { list = JSON.parse(s.relation_templates || '[]'); } catch { /* sem modelos */ }
+  const found = list.find((t) => foldText(t.label) === foldText(g.group_name)) || list[list.length - 1] || {};
+  const fill = (text) => String(text || '').replace(/\{nome\}/g, () => g.name).replace(/\{primeiro_nome\}/g, () => g.name.trim().split(/\s+/)[0]);
+  return { cover_line: fill(found.cover_line), salutation: fill(found.salutation), message: fill(found.message) };
+}
+
+function publicGuest(g, s) {
+  if (!g) return g;
+  const tpl = guestTemplate(g, s);
+  return {
     token: g.token, name: g.name, phone: g.phone, status: g.status, max_companions: g.max_companions,
     companions: g.companions, companion_names: parseNames(g.companion_names), notes: g.notes,
-    salutation: g.salutation || '', personal_message: g.personal_message || '',
+    cover_line: tpl.cover_line, salutation: g.salutation || tpl.salutation, personal_message: g.personal_message || tpl.message,
   };
 }
 
@@ -89,7 +102,9 @@ async function publicData(db, token) {
     db.prepare('SELECT * FROM guests WHERE token=?').bind(token || ''),
   ]);
   // Os valores iniciais cobrem definições novas ausentes de cópias antigas restauradas.
-  const s = { ...DEFAULT_SETTINGS, ...Object.fromEntries(settings.results.map((r) => [r.key, r.value])) };
+  const all = { ...DEFAULT_SETTINGS, ...Object.fromEntries(settings.results.map((r) => [r.key, r.value])) };
+  // Os textos de cada nível e as mensagens de envio não saem para o público.
+  const { relation_templates: _templates, std_share_message: _share, ...s } = all;
   return {
     s,
     chapters: chapters.results,
@@ -99,7 +114,7 @@ async function publicData(db, token) {
     stores: stores.results,
     categories: categories.results,
     gifts: gifts.results,
-    guest: publicGuest(guest.results[0]) || null,
+    guest: publicGuest(guest.results[0], all) || null,
     rsvp: deadlineInfo(s),
     invalidToken: Boolean(token) && !guest.results[0],
   };
@@ -138,20 +153,20 @@ async function renderInvite(request, env, db, token) {
 }
 
 // Save the Date: recebe só o necessário, sem programa, presentes nem outros dados do convidado.
-const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'event_tz', 'envelope_seal_text', 'std_photo', 'cover_image', 'std_eyebrow', 'std_hint', 'std_message', 'std_next', 'color_primary', 'color_gold', 'font_titles', 'font_text'];
+const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'event_tz', 'envelope_seal_text', 'std_photo', 'cover_image', 'std_title', 'std_hint', 'std_message', 'std_next', 'color_primary', 'color_gold', 'font_titles', 'font_text'];
 
 async function renderSaveDate(request, env, db, token) {
   const s = { ...DEFAULT_SETTINGS, ...(await getSettings(db)) };
-  const guest = token ? await db.prepare('SELECT name FROM guests WHERE token=?').bind(token).first() : null;
+  const guest = token ? await db.prepare('SELECT name, group_name FROM guests WHERE token=?').bind(token).first() : null;
   if (s.show_savedate === '0') {
     return new Response(null, { status: 302, headers: { Location: token && guest ? `/c/${token}` : '/' } });
   }
   const asset = await env.ASSETS.fetch(new URL('/guarde-a-data/', request.url));
   const origin = new URL(request.url).origin;
   const photo = s.std_photo || s.cover_image;
-  const title = guest ? `${guest.name}, guarde esta data` : `${s.couple_display}: guarde esta data`;
+  const title = guest ? `${guest.name}, ${s.std_title}` : `${s.couple_display} | ${s.std_title}`;
   const meta = [
-    `<title>${escHtml(`${s.couple_display} | Guarde esta data`)}</title>`,
+    `<title>${escHtml(`${s.couple_display} | ${s.std_title}`)}</title>`,
     `<meta name="description" content="${escHtml(s.std_message)}">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:title" content="${escHtml(title)}">`,
@@ -160,7 +175,7 @@ async function renderSaveDate(request, env, db, token) {
     `<meta name="twitter:card" content="summary_large_image">`,
     token ? '<meta name="robots" content="noindex">' : '',
   ].join('\n');
-  const data = { s: Object.fromEntries(SAVE_DATE_KEYS.map((k) => [k, s[k]])), guest: guest ? { name: guest.name } : null };
+  const data = { s: Object.fromEntries(SAVE_DATE_KEYS.map((k) => [k, s[k]])), guest: guest ? { name: guest.name, cover_line: guestTemplate(guest, s).cover_line } : null };
   const boot = JSON.stringify(data).replace(/</g, '\\u003c');
   const html = (await asset.text())
     .replace('<!--META-->', () => meta)
@@ -352,7 +367,7 @@ const URL_SETTINGS = new Set(['footer_instagram']);
 const MEDIA_SETTINGS = new Set(['std_photo', 'groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
 
 function cleanSetting(key, raw) {
-  const value = str(raw, 6000);
+  const value = str(raw, key === 'relation_templates' ? 40000 : 6000);
   if (key.startsWith('color_')) return isColor(value) ? value : fail(400, `Cor inválida em ${key}.`);
   if (key === 'font_titles') return FONT_OPTIONS.titles.includes(value) ? value : fail(400, 'Fonte inválida.');
   if (key === 'font_text') return FONT_OPTIONS.text.includes(value) ? value : fail(400, 'Fonte inválida.');
@@ -373,6 +388,16 @@ function cleanSetting(key, raw) {
     try { list = JSON.parse(value); } catch { fail(400, 'Lista inválida.'); }
     if (!Array.isArray(list)) fail(400, 'Lista inválida.');
     return JSON.stringify(list.slice(0, 30).map((i) => ({ title: str(i.title, 120), text: str(i.text, 400) })).filter((i) => i.title));
+  }
+  if (key === 'relation_templates') {
+    let list;
+    try { list = JSON.parse(value); } catch { fail(400, 'Modelos inválidos.'); }
+    if (!Array.isArray(list)) fail(400, 'Modelos inválidos.');
+    const clean = list.slice(0, 30).map((t) => ({
+      label: str(t.label, 60), cover_line: str(t.cover_line, 80), salutation: str(t.salutation, 80), message: str(t.message, 600),
+      wa_savedate: str(t.wa_savedate, 800), wa_invite: str(t.wa_invite, 800),
+    })).filter((t) => t.label);
+    return clean.length ? JSON.stringify(clean) : fail(400, 'Mantenha pelo menos um modelo.');
   }
   return value;
 }
@@ -537,8 +562,43 @@ async function importGuests(request, db) {
     companions: 0, companion_names: '[]', notes: '', admin_notes: '', source: 'lista', created_at: now,
     salutation: str(r.salutation, 80), personal_message: str(r.personal_message, 600),
   })).filter((r) => r.name.length >= 2);
-  if (clean.length) await bulkInsert(db, 'guests', Object.keys(clean[0]), clean);
-  return json({ ok: true, imported: clean.length });
+  // Importar de novo actualiza a mesma pessoa: mantém o link, a resposta e o registo de envio.
+  const existing = await rows(db.prepare('SELECT id, name, phone FROM guests'));
+  const digits = (p) => String(p || '').replace(/\D/g, '').slice(-9);
+  const byPhone = new Map(existing.filter((g) => digits(g.phone).length === 9).map((g) => [digits(g.phone), g.id]));
+  const byName = new Map(existing.map((g) => [foldText(g.name), { id: g.id, phone: digits(g.phone) }]));
+  const fresh = [];
+  const changes = new Map();
+  for (const r of clean) {
+    const phone = digits(r.phone);
+    const named = byName.get(foldText(r.name));
+    // Mesmo nome com outro telefone é outra pessoa.
+    const id = byPhone.get(phone) || (named && (!phone || !named.phone || phone === named.phone) ? named.id : null);
+    if (id) changes.set(id, { id, name: r.name, phone: r.phone, group_name: r.group_name, max_companions: r.max_companions, salutation: r.salutation, personal_message: r.personal_message });
+    else {
+      fresh.push(r);
+      if (phone.length === 9) byPhone.set(phone, -1);
+      if (!named) byName.set(foldText(r.name), { id: -1, phone });
+    }
+  }
+  changes.delete(-1); // linha repetida no próprio ficheiro
+  const updates = [...changes.values()];
+  if (fresh.length) await bulkInsert(db, 'guests', Object.keys(fresh[0]), fresh);
+  if (updates.length) {
+    const col = (c) => `(SELECT json_extract(j.value,'$.${c}') FROM json_each(?1) j WHERE json_extract(j.value,'$.id') = guests.id)`;
+    const keep = (c) => `${c} = COALESCE(NULLIF(${col(c)},''), ${c})`;
+    await db.prepare(`UPDATE guests SET name=${col('name')}, ${keep('phone')}, ${keep('group_name')}, max_companions=${col('max_companions')}, ${keep('salutation')}, ${keep('personal_message')} WHERE id IN (SELECT json_extract(value,'$.id') FROM json_each(?1))`)
+      .bind(JSON.stringify(updates)).run();
+  }
+  return json({ ok: true, imported: fresh.length, updated: updates.length });
+}
+
+async function markSent(request, db, id) {
+  const { kind, undo } = await readJson(request, 200);
+  const col = kind === 'savedate' ? 'savedate_sent_at' : kind === 'invite' ? 'invite_sent_at' : fail(400, 'Tipo de envio inválido.');
+  const row = await db.prepare(`UPDATE guests SET ${col}=? WHERE id=? RETURNING id`).bind(undo ? null : nowIso(), id).first();
+  if (!row) fail(404, 'Convidado não encontrado.');
+  return json({ ok: true });
 }
 
 async function exportGuests(db) {
@@ -696,6 +756,7 @@ async function adminRoutes(request, env, db, path, method) {
     return json({ ok: true });
   }
   if ((m = /^gallery\/(\d+)\/move$/.exec(path)) && method === 'POST') return move(request, db, 'gallery', Number(m[1]));
+  if ((m = /^guests\/(\d+)\/sent$/.exec(path)) && method === 'POST') return markSent(request, db, Number(m[1]));
   if ((m = /^gifts\/(\d+)\/reset$/.exec(path)) && method === 'POST') {
     await db.prepare('UPDATE gifts SET available=1, chosen_by=NULL WHERE id=?').bind(Number(m[1])).run();
     return json({ ok: true });

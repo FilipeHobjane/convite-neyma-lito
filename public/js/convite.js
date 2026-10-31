@@ -148,7 +148,7 @@
     };
     const box = h('div', { class: 'cover' },
       h('button', { class: 'skip', type: 'button', onclick: () => { startMusic(); finish(); } }, 'Saltar abertura'),
-      guest ? h('div', null, h('div', { class: 'cover-to' }, 'Para'), h('div', { class: 'cover-guest' }, guest.name)) : null,
+      guest ? h('div', null, h('div', { class: 'cover-to' }, guest.cover_line || 'Para'), h('div', { class: 'cover-guest' }, guest.name)) : null,
       envBtn,
       h('div', null, h('div', { class: 'cover-names' }, s.couple_display), h('div', { class: 'cover-date' }, longDate(s.wedding_date))),
       h('div', { class: 'cover-hint' }, s.cover_hint),

@@ -339,7 +339,7 @@ test('Save the Date: link geral e pessoal sem dados a mais', async () => {
   assert.equal(page.status, 200);
   const html = await page.text();
   const data = boot(html);
-  assert.deepEqual(data.guest, { name: 'Tia Ana' });
+  assert.deepEqual(data.guest, { name: 'Tia Ana', cover_line: '' });
   assert.equal(data.s.wedding_date, '2099-01-02');
   assert.equal(data.events, undefined);
   assert.equal(data.s.mpesa_number, undefined);
@@ -361,6 +361,71 @@ test('Save the Date: link geral e pessoal sem dados a mais', async () => {
   assert.equal(off.status, 302);
   assert.equal(off.headers.get('location'), `/c/${item.token}`);
   await admin('settings', 'PUT', { show_savedate: '1' });
+  await admin(`guests/${item.id}`, 'DELETE');
+});
+
+test('modelos: texto por relação, sem expor os outros níveis', async () => {
+  const { item: a } = await adminJson('guests', 'POST', { name: 'Ana Sitoe', group_name: 'família próxima' });
+  const { item: b } = await adminJson('guests', 'POST', { name: 'Bruno Cossa', group_name: 'Colegas', personal_message: 'Mensagem-do-Bruno' });
+  const { item: c } = await adminJson('guests', 'POST', { name: 'Carla Mondlane', group_name: 'Desconhecida' });
+  const pa = boot(await (await call(`/c/${a.token}`)).text());
+  assert.equal(pa.guest.cover_line, 'Para a nossa família');
+  assert.equal(pa.guest.salutation, 'Querido(a) Ana,');
+  assert.match(pa.guest.personal_message, /^Crescemos/);
+  const htmlB = await (await call(`/c/${b.token}`)).text();
+  const pb = boot(htmlB);
+  assert.equal(pb.guest.cover_line, 'Com estima');
+  assert.equal(pb.guest.personal_message, 'Mensagem-do-Bruno');
+  assert.equal(pb.s.relation_templates, undefined);
+  assert.ok(!htmlB.includes('Crescemos'), 'outros níveis não saem para o público');
+  assert.equal(boot(await (await call(`/c/${c.token}`)).text()).guest.cover_line, '');
+  assert.equal(boot(await (await call(`/guarde-a-data/${a.token}`)).text()).guest.cover_line, 'Para a nossa família');
+  assert.equal(boot(await (await call('/')).text()).s.relation_templates, undefined);
+  assert.equal((await admin('settings', 'PUT', { relation_templates: 'nao-json' })).status, 400);
+  assert.equal((await admin('settings', 'PUT', { relation_templates: '[]' })).status, 400);
+  for (const g of [a, b, c]) await admin(`guests/${g.id}`, 'DELETE');
+});
+
+test('importar de novo actualiza a mesma pessoa e mantém o link', async () => {
+  const first = await adminJson('guests/import', 'POST', { rows: [
+    { name: 'Dina Excel', phone: '+258841110001', group_name: 'Amigos', max_companions: 1 },
+    { name: 'Eva Excel', phone: '', group_name: 'Colegas' },
+    { name: 'Fred Excel', phone: '+258841110003' },
+    { name: 'Fred Excel', phone: '+258841110004' },
+  ] });
+  assert.deepEqual([first.imported, first.updated], [4, 0]);
+  const list = () => adminJson('all').then((d) => d.guests.filter((g) => g.name.endsWith('Excel') || g.name === 'Dina Nova'));
+  const dina = (await list()).find((g) => g.name === 'Dina Excel');
+  await call('/api/rsvp', { body: { token: dina.token, status: 'sim', acompanhantes: 1 } });
+  const second = await adminJson('guests/import', 'POST', { rows: [
+    { name: 'Dina Nova', phone: '841110001', group_name: 'Amigos próximos', max_companions: 2, personal_message: 'Nova carta' },
+    { name: 'Eva Excel', phone: '+258841110002', group_name: 'Colegas' },
+    { name: 'Fred Excel', phone: '+258841110005' },
+  ] });
+  assert.deepEqual([second.imported, second.updated], [1, 2]);
+  const after = await list();
+  const dina2 = after.find((g) => g.token === dina.token);
+  assert.equal(dina2.name, 'Dina Nova');
+  assert.equal(dina2.group_name, 'Amigos próximos');
+  assert.equal(dina2.status, 'sim');
+  assert.equal(dina2.personal_message, 'Nova carta');
+  assert.equal(after.find((g) => g.name === 'Eva Excel').phone, '+258841110002');
+  assert.equal(after.filter((g) => g.name === 'Fred Excel').length, 3);
+  for (const g of after) await admin(`guests/${g.id}`, 'DELETE');
+});
+
+test('envio: registar e desmarcar, só com sessão', async () => {
+  const { item } = await adminJson('guests', 'POST', { name: 'Gil Envio' });
+  assert.equal((await call(`/api/admin/guests/${item.id}/sent`, { body: { kind: 'invite' } })).status, 401);
+  assert.equal((await admin(`guests/${item.id}/sent`, 'POST', { kind: 'outro' })).status, 400);
+  assert.equal((await admin('guests/999999/sent', 'POST', { kind: 'invite' })).status, 404);
+  assert.equal((await admin(`guests/${item.id}/sent`, 'POST', { kind: 'savedate' })).status, 200);
+  const sent = (await adminJson('all')).guests.find((g) => g.id === item.id);
+  assert.ok(sent.savedate_sent_at);
+  assert.equal(sent.invite_sent_at, null);
+  await admin(`guests/${item.id}/sent`, 'POST', { kind: 'savedate', undo: true });
+  assert.equal((await adminJson('all')).guests.find((g) => g.id === item.id).savedate_sent_at, null);
+  assert.ok(!(await (await call(`/c/${item.token}`)).text()).includes('sent_at'));
   await admin(`guests/${item.id}`, 'DELETE');
 });
 
