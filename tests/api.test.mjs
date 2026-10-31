@@ -327,6 +327,43 @@ test('capítulos: público, ordem, protecção e ficheiro antigo', async () => {
   assert.equal((await call(`/media/${two}`)).status, 404);
 });
 
+test('Save the Date: link geral e pessoal sem dados a mais', async () => {
+  const { item } = await adminJson('guests', 'POST', { name: 'Tia Ana', phone: '+258840000001', notes: 'Nota-privada', admin_notes: 'Interna-privada', personal_message: 'Carta-privada' });
+  const general = await call('/guarde-a-data');
+  assert.equal(general.status, 200);
+  assert.match(general.headers.get('content-security-policy'), /script-src 'self'/);
+  const generalHtml = await general.text();
+  assert.match(generalHtml, /guarde-a-data\.js/);
+  assert.equal(boot(generalHtml).guest, null);
+  const page = await call(`/guarde-a-data/${item.token}`);
+  assert.equal(page.status, 200);
+  const html = await page.text();
+  const data = boot(html);
+  assert.deepEqual(data.guest, { name: 'Tia Ana' });
+  assert.equal(data.s.wedding_date, '2099-01-02');
+  assert.equal(data.events, undefined);
+  assert.equal(data.s.mpesa_number, undefined);
+  for (const secret of ['+258840000001', 'Nota-privada', 'Interna-privada', 'Carta-privada']) assert.ok(!html.includes(secret), secret);
+  assert.match(html, /name="robots" content="noindex"/);
+
+  const invalid = await call('/guarde-a-data/inexistente123');
+  assert.equal(invalid.status, 404);
+  assert.equal(boot(await invalid.text()).guest, null);
+
+  const one = await upload(new Uint8Array(600).fill(6));
+  await admin('settings', 'PUT', { std_photo: one });
+  assert.equal(boot(await (await call('/guarde-a-data')).text()).s.std_photo, one);
+  await admin('settings', 'PUT', { std_photo: '' });
+  assert.equal((await call(`/media/${one}`)).status, 404);
+
+  await admin('settings', 'PUT', { show_savedate: '0' });
+  const off = await call(`/guarde-a-data/${item.token}`);
+  assert.equal(off.status, 302);
+  assert.equal(off.headers.get('location'), `/c/${item.token}`);
+  await admin('settings', 'PUT', { show_savedate: '1' });
+  await admin(`guests/${item.id}`, 'DELETE');
+});
+
 test('migração: base da versão anterior ganha as colunas e mantém os dados', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'v2-'));
   const path = join(folder, 'v2.db');

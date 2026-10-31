@@ -137,6 +137,40 @@ async function renderInvite(request, env, db, token) {
   });
 }
 
+// Save the Date: recebe só o necessário, sem programa, presentes nem outros dados do convidado.
+const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'event_tz', 'envelope_seal_text', 'std_photo', 'cover_image', 'std_eyebrow', 'std_hint', 'std_message', 'std_next', 'color_primary', 'color_gold', 'font_titles', 'font_text'];
+
+async function renderSaveDate(request, env, db, token) {
+  const s = { ...DEFAULT_SETTINGS, ...(await getSettings(db)) };
+  const guest = token ? await db.prepare('SELECT name FROM guests WHERE token=?').bind(token).first() : null;
+  if (s.show_savedate === '0') {
+    return new Response(null, { status: 302, headers: { Location: token && guest ? `/c/${token}` : '/' } });
+  }
+  const asset = await env.ASSETS.fetch(new URL('/guarde-a-data/', request.url));
+  const origin = new URL(request.url).origin;
+  const photo = s.std_photo || s.cover_image;
+  const title = guest ? `${guest.name}, guarde esta data` : `${s.couple_display}: guarde esta data`;
+  const meta = [
+    `<title>${escHtml(`${s.couple_display} | Guarde esta data`)}</title>`,
+    `<meta name="description" content="${escHtml(s.std_message)}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:title" content="${escHtml(title)}">`,
+    `<meta property="og:description" content="${escHtml(s.std_message)}">`,
+    `<meta property="og:image" content="${escHtml(photo ? `${origin}/media/${photo}` : `${origin}/icons/og.jpg`)}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    token ? '<meta name="robots" content="noindex">' : '',
+  ].join('\n');
+  const data = { s: Object.fromEntries(SAVE_DATE_KEYS.map((k) => [k, s[k]])), guest: guest ? { name: guest.name } : null };
+  const boot = JSON.stringify(data).replace(/</g, '\\u003c');
+  const html = (await asset.text())
+    .replace('<!--META-->', () => meta)
+    .replace('<!--BOOT-->', () => `<script id="boot" type="application/json">${boot}</script>`);
+  return new Response(html, {
+    status: token && !guest ? 404 : 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
 // ---------- Rotas públicas de escrita ----------
 
 const normalizeName = (v) => str(v, 120).replace(/\s+/g, ' ');
@@ -315,7 +349,7 @@ async function putChunk(request, db, id, idx) {
 // ---------- Administração: validação ----------
 
 const URL_SETTINGS = new Set(['footer_instagram']);
-const MEDIA_SETTINGS = new Set(['groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
+const MEDIA_SETTINGS = new Set(['std_photo', 'groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
 
 function cleanSetting(key, raw) {
   const value = str(raw, 6000);
@@ -691,6 +725,7 @@ async function route(request, env, ctx) {
   if (p === '/' && method === 'GET') return renderInvite(request, env, db, '');
   let m;
   if ((m = /^\/c\/([\w-]{8,40})\/?$/.exec(p)) && method === 'GET') return renderInvite(request, env, db, m[1]);
+  if ((m = /^\/guarde-a-data(?:\/([\w-]{8,40}))?\/?$/.exec(p)) && method === 'GET') return renderSaveDate(request, env, db, m[1] || '');
   if ((m = /^\/media\/([a-f0-9]{32})$/.exec(p)) && (method === 'GET' || method === 'HEAD')) return serveMedia(request, db, m[1], ctx);
 
   if (p === '/api/rsvp' && method === 'POST') return submitRsvp(request, env, db);

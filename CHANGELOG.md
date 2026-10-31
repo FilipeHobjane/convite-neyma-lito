@@ -1,5 +1,11 @@
 # Registo de alterações
 
+## 2.3.0 (31/10/2026)
+
+- Save the Date em `/guarde-a-data`: folha dourada para raspar, foto dos noivos, pétalas, contagem e agenda.
+- Link pessoal com o nome do convidado, em `/guarde-a-data/<código>`, enviado pelo botão **Save the Date** em **Convidados**.
+- Secção **Save the Date** no painel para a foto, os textos e a mensagem do WhatsApp.
+
 ## 2.2.0 (31/10/2026)
 
 - Abertura: o selo parte-se ao toque e o telemóvel vibra, nos que o permitem. Botão para saltar a abertura.

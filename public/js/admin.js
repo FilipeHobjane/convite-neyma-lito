@@ -203,6 +203,7 @@
             h('button', { class: 'btn alt sm', type: 'button', onclick: () => guestDialog(g) }, 'Editar'),
             h('button', { class: 'btn alt sm', type: 'button', onclick: () => navigator.clipboard.writeText(guestLink(g)).then(() => toast('Link copiado.')) }, 'Copiar link'),
             h('a', { class: 'btn alt sm', target: '_blank', rel: 'noopener', href: `https://wa.me/${(g.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`${g.name}, ${D.settings.share_message}\n\n${guestLink(g)}`)}` }, 'WhatsApp'),
+            h('a', { class: 'btn alt sm', target: '_blank', rel: 'noopener', href: `https://wa.me/${(g.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`${g.name}, ${D.settings.std_share_message}\n\n${location.origin}/guarde-a-data/${g.token}`)}` }, 'Save the Date'),
             h('button', { class: 'btn bad sm', type: 'button', onclick: () => { if (confirm(`Eliminar ${g.name}?`)) act(() => api(`guests/${g.id}`, 'DELETE'), 'Eliminado.'); } }, 'Eliminar'))))));
       if (!list.length) tbody.append(h('tr', null, h('td', { colSpan: 4, class: 'muted' }, 'Nenhum convidado encontrado.')));
     };
@@ -345,6 +346,21 @@
         { k: 'text', l: 'Texto', t: 'area' },
       ], D.chapters, { ordered: true, image: true }),
       h('p', { class: 'muted' }, 'Sem capítulos, esta secção não aparece no convite.'),
+    ]],
+    savedate: ['Save the Date', () => [
+      h('h1', null, 'Save the Date'),
+      h('div', { class: 'card' }, h('h2', null, 'Link geral'),
+        h('p', null, h('a', { href: '/guarde-a-data', target: '_blank', rel: 'noopener' }, `${location.origin}/guarde-a-data`)),
+        h('p', { class: 'muted' }, 'Para mostrar o nome de cada pessoa, use o botão Save the Date em Convidados. A data é a de Data e confirmações.')),
+      h('div', { class: 'card' }, h('h2', null, 'Fotografia'),
+        imageSetting('Aparece ao raspar. Ao alto fica melhor, com os rostos a meio ou acima do meio. Sem foto, usa a capa do convite.', 'std_photo')),
+      settingsForm('Textos', [
+        { k: 'show_savedate', l: 'Save the Date activo (desligado, os links abrem o convite)', t: 'check' },
+        { k: 'std_eyebrow', l: 'Título' }, { k: 'std_hint', l: 'Instrução para raspar' },
+        { k: 'std_message', l: 'Frase depois de raspar', t: 'area', rows: 2 },
+        { k: 'std_next', l: 'Aviso sobre o convite', t: 'area', rows: 2 },
+        { k: 'std_share_message', l: 'Mensagem no WhatsApp', t: 'area', rows: 2 },
+      ]),
     ]],
     programa: ['Programa e locais', () => [
       h('h1', null, 'Programa e locais'),

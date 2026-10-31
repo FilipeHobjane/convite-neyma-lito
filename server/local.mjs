@@ -75,7 +75,7 @@ async function staticFile(pathname) {
   return { body: await readFile(file), type: TYPES[extname(file).toLowerCase()] || 'application/octet-stream' };
 }
 
-const isDynamic = (p) => p === '/' || p.startsWith('/c/') || p.startsWith('/api/') || p.startsWith('/media/');
+const isDynamic = (p) => p === '/' || p.startsWith('/c/') || p === '/guarde-a-data' || p.startsWith('/guarde-a-data/') || p.startsWith('/api/') || p.startsWith('/media/');
 
 export function startServer({ port, dbPath, env }) {
   const db = d1Compatible(dbPath);

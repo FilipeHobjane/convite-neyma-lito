@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '3';
+export const SCHEMA_VERSION = '4';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -168,6 +168,13 @@ export const DEFAULT_SETTINGS = {
   letter_greeting_general: 'Querido(a) convidado(a),',
   letter_greeting_personal: 'Querido(a) {nome},',
   letter_message: 'Este dia não seria o mesmo sem si. Ficaremos muito felizes por celebrá-lo consigo.',
+  show_savedate: '1',
+  std_photo: '',
+  std_eyebrow: 'Guarde esta data',
+  std_hint: 'Raspe o dourado com o dedo para descobrir',
+  std_message: 'Vamos casar, e este dia só fica completo consigo.',
+  std_next: 'O convite, com o programa e o local, segue em breve.',
+  std_share_message: 'Temos uma novidade para si. Raspe o dourado e descubra a data:',
   cover_hint: 'Toque no selo para abrir',
   hero_eyebrow: 'Vamos casar',
   hero_eyebrow_after: 'Casámos',
