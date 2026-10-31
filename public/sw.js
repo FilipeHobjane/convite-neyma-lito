@@ -1,6 +1,6 @@
 ﻿// PWA: guarda só ficheiros estáticos e fotografias. Nunca guarda a página nem /api,
 // para o convidado não ver confirmações, prazos ou presentes desactualizados.
-const CACHE = 'convite-v4';
+const CACHE = 'convite-v5';
 const SHELL = ['/offline/', '/css/convite.css', '/js/convite.js', '/icons/favicon.png', '/fonts/cormorant.woff2', '/fonts/cormorant-italic.woff2', '/fonts/jost.woff2'];
 
 self.addEventListener('install', (event) => {
@@ -17,7 +17,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin')) return;
+  // O painel usa sempre a versão mais recente: uma cópia antiga esconderia secções novas.
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin') || /^\/(js|css)\/admin\./.test(url.pathname)) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).catch(() => caches.match('/offline/')));
