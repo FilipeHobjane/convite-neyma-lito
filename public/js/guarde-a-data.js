@@ -62,9 +62,7 @@
     h('p', { class: 'line' }, s.std_message), count,
     h('button', { class: 'btn', type: 'button', onclick: downloadIcs }, 'Guardar na agenda'),
     s.std_next ? h('p', { class: 'next' }, s.std_next) : null);
-  const before = h('div', null,
-    h('p', { class: 'hint' }, s.std_hint),
-    h('button', { class: 'link', type: 'button', onclick: () => finish() }, 'Mostrar a data sem raspar'));
+  const before = h('p', { class: 'hint' }, s.std_hint);
   const names = [firstName(s.bride_name), firstName(s.groom_name)];
   app.append(h('main', { class: 'arch' },
     h('div', null,

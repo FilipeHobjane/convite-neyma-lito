@@ -36,7 +36,6 @@ button{font:inherit;color:inherit}
 .foil{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;transition:opacity .7s var(--ease)}
 .foil.gone{opacity:0;pointer-events:none}
 .hint{font-size:.86rem}
-.link{background:none;border:0;padding:.5rem;min-height:40px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:.84rem;opacity:.86}
 
 .after{display:grid;justify-items:center;gap:1rem;width:100%}
 .after[hidden]{display:none}
