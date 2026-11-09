@@ -49,21 +49,34 @@
   // ---------- Página ----------
   const photoId = s.std_photo || s.cover_image;
   const foil = h('canvas', { class: 'foil', role: 'img', 'aria-label': 'Folha dourada que esconde a data' });
-  // Com vídeo, a foto serve de imagem de espera. Começa sem som: os telemóveis só deixam tocar assim.
+  // Com vídeo, a foto serve de imagem de espera. O vídeo toca com som ao revelar a data:
+  // os telemóveis só o permitem depois de um toque, e raspar já é esse toque.
   const video = s.std_video ? h('video', {
     class: 'photo', src: `/media/${s.std_video}`, poster: photoId ? `/media/${photoId}` : null,
-    muted: true, loop: true, playsInline: true, preload: 'metadata', 'aria-label': `Vídeo de ${s.couple_display}`,
+    muted: true, loop: true, playsInline: true, preload: 'auto', 'aria-label': `Vídeo de ${s.couple_display}`,
   }) : null;
   if (video) video.setAttribute('playsinline', '');
-  const sound = video ? h('button', {
-    class: 'sound', type: 'button', hidden: true, 'aria-pressed': 'false',
-    onclick: () => {
-      video.muted = !video.muted;
-      sound.setAttribute('aria-pressed', String(!video.muted));
-      sound.textContent = video.muted ? 'Ligar som' : 'Desligar som';
-      if (video.paused) video.play().catch(() => {});
-    },
-  }, 'Ligar som') : null;
+  let unlocked = false;
+  // No primeiro toque, o vídeo é iniciado e parado de imediato: o iPhone só deixa tocar com som
+  // um vídeo que já começou dentro de um toque, e a revelação pode acontecer a meio do gesto.
+  function unlock() {
+    if (!video || unlocked || finished) return;
+    unlocked = true;
+    video.muted = false;
+    video.play().catch(() => {});
+    video.pause();
+  }
+  function playWithSound() {
+    video.muted = false;
+    video.play().catch(() => {
+      // Se o navegador recusar, começa sem som e o som entra no toque seguinte, em qualquer parte do ecrã.
+      video.muted = true;
+      video.play().catch(() => {});
+      const resume = () => { video.muted = false; video.play().catch(() => {}); };
+      addEventListener('pointerup', resume, { once: true });
+      addEventListener('touchend', resume, { once: true });
+    });
+  }
   const ticket = h('div', { class: 'ticket' },
     video || (photoId ? h('img', { class: 'photo', src: `/media/${photoId}`, alt: `Fotografia de ${s.couple_display}`, fetchpriority: 'high' }) : null),
     h('div', { class: 'date' }, h('small', null, weekday), h('b', null, d), h('em', null, `${MONTHS[m - 1]} de ${y}`)),
@@ -74,7 +87,7 @@
   const count = h('div', { class: 'count', role: 'timer' },
     h('div', null, dias, h('small', null, 'Dias')), h('div', null, horas, h('small', null, 'Horas')), h('div', null, mins, h('small', null, 'Min')));
   const after = h('div', { class: 'after', hidden: true },
-    sound, h('p', { class: 'line' }, s.std_message), count,
+    h('p', { class: 'line' }, s.std_message), count,
     h('button', { class: 'btn', type: 'button', onclick: downloadIcs }, 'Guardar na agenda'),
     s.std_next ? h('p', { class: 'next' }, s.std_next) : null);
   const before = h('p', { class: 'hint' }, s.std_hint);
@@ -153,6 +166,8 @@
     last = p;
   });
   ['pointerup', 'pointercancel'].forEach((n) => foil.addEventListener(n, () => { drawing = false; if (!finished) check(); }));
+  foil.addEventListener('pointerup', unlock);
+  foil.addEventListener('touchend', unlock);
 
   function tick() {
     const left = target - Date.now();
@@ -171,7 +186,8 @@
     before.hidden = true;
     after.hidden = false;
     if (video) {
-      video.play().then(() => { sound.hidden = false; }).catch(() => { video.controls = true; });
+      video.currentTime = 0;
+      playWithSound();
     }
     tick();
     setInterval(tick, 30000);

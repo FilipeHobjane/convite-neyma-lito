@@ -578,7 +578,7 @@
         const d = D.settings;
         const status = h('p', { class: 'muted', role: 'status' });
         return h('div', { class: 'card' }, h('h2', null, 'Vídeo'),
-          h('p', { class: 'muted' }, 'Se carregar um vídeo, é ele que aparece ao raspar, em vez da foto. Começa sem som e repete-se; o convidado pode ligar o som.'),
+          h('p', { class: 'muted' }, 'Se carregar um vídeo, é ele que aparece ao raspar, em vez da foto. Começa com som ao revelar a data e repete-se.'),
           d.std_video ? h('video', { class: 'space', controls: true, playsInline: true, preload: 'metadata', src: media(d.std_video) }) : h('p', { class: 'space' }, 'Nenhum vídeo carregado.'),
           h('div', { class: 'row space' },
             h('label', { class: 'btn alt file' }, d.std_video ? 'Substituir vídeo' : 'Carregar vídeo', h('input', {

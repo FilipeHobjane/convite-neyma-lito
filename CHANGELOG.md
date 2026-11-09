@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.5.1 (09/11/2026)
+
+- Save the Date: o vídeo começa com som ao revelar a data, sem botão. Se o navegador recusar, começa sem som e o som entra no toque seguinte.
+
 ## 2.5.0 (09/11/2026)
 
 - Save the Date: vídeo opcional (MP4 ou WebM, até 30 MB) por baixo do dourado. Começa sem som, repete-se e tem botão para ligar o som; a foto serve de imagem de espera.
