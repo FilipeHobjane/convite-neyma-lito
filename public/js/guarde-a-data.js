@@ -55,26 +55,30 @@
     muted: true, loop: true, playsInline: true, preload: 'auto', 'aria-label': `Vídeo de ${s.couple_display}`,
   }) : null;
   if (video) { video.setAttribute('playsinline', ''); video.setAttribute('muted', ''); }
-  // O iPhone só deixa iniciar um vídeo dentro de um toque (ao levantar o dedo), e a data pode
-  // aparecer a meio do gesto. Enquanto o vídeo não tocar com som, cada toque volta a tentar.
+  // O iPhone só deixa iniciar um vídeo com som dentro de um toque. Por isso a data só é revelada
+  // quando o dedo sai do ecrã: a revelação e o vídeo acontecem no mesmo toque, que ele aceita.
   let pendingVideo = false;
-  // Só aparece se o telemóvel recusar o vídeo: um toque nele é sempre aceite.
-  const playBtn = video ? h('button', { class: 'play', type: 'button', hidden: true, 'aria-label': 'Ver o vídeo', onclick: () => { pendingVideo = true; startVideo(); } }, '▶') : null;
   function startVideo() {
     if (!pendingVideo) return;
     video.muted = false;
-    video.play().then(() => { pendingVideo = false; playBtn.hidden = true; }).catch(() => {
+    video.play().then(() => { pendingVideo = false; }).catch(() => {
       video.muted = true;
       video.play().catch(() => {});
     });
   }
-  if (video) {
-    ['touchend', 'pointerup', 'click'].forEach((n) => addEventListener(n, startVideo, { passive: true }));
-    video.addEventListener('playing', () => { if (!video.muted) playBtn.hidden = true; });
+  // Se mesmo assim o telemóvel recusar, qualquer toque seguinte, em qualquer parte do ecrã, volta a tentar.
+  if (video) ['touchend', 'pointerup', 'click'].forEach((n) => addEventListener(n, startVideo, { passive: true }));
+  // No primeiro toque, o vídeo começa a carregar e a correr sem som por baixo do dourado,
+  // para estar pronto quando a data aparecer.
+  let primed = false;
+  function prime() {
+    if (!video || primed || finished) return;
+    primed = true;
+    video.muted = true;
+    video.play().catch(() => { primed = false; });
   }
   const ticket = h('div', { class: 'ticket' },
     video || (photoId ? h('img', { class: 'photo', src: `/media/${photoId}`, alt: `Fotografia de ${s.couple_display}`, fetchpriority: 'high' }) : null),
-    playBtn,
     h('div', { class: 'date' }, h('small', null, weekday), h('b', null, d), h('em', null, `${MONTHS[m - 1]} de ${y}`)),
     foil);
   const dias = h('b', null, '0');
@@ -146,7 +150,7 @@
     ctx.lineTo(to.x, to.y);
     ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
-    if (++strokes % 6 === 0) check();
+    strokes++;
   }
   foil.addEventListener('pointerdown', (e) => {
     if (finished) return;
@@ -161,12 +165,11 @@
     scratch(last, p);
     last = p;
   });
-  ['pointerup', 'pointercancel'].forEach((n) => foil.addEventListener(n, () => { drawing = false; if (!finished) check(); }));
-  // A folha continua a receber o dedo até ele sair do ecrã: sem isso, o iPhone cancela o toque
-  // e o vídeo não pode arrancar.
-  ['pointerup', 'pointercancel', 'touchend', 'touchcancel'].forEach((n) => foil.addEventListener(n, () => {
-    if (finished) setTimeout(() => foil.classList.remove('held'), 0);
-  }));
+  // Ao levantar o dedo: no toque, o iPhone só aceita iniciar o vídeo no touchend; com o rato, no pointerup.
+  const lift = () => { drawing = false; if (finished) return; check(); prime(); };
+  foil.addEventListener('touchend', lift);
+  foil.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') lift(); });
+  foil.addEventListener('pointercancel', () => { drawing = false; });
 
   function tick() {
     const left = target - Date.now();
@@ -179,7 +182,6 @@
   function finish() {
     if (finished) return;
     finished = true;
-    if (drawing) foil.classList.add('held');
     drawing = false;
     foil.classList.add('gone');
     ticket.classList.add('done');
@@ -189,7 +191,6 @@
       if (video.readyState > 0) video.currentTime = 0;
       pendingVideo = true;
       startVideo();
-      setTimeout(() => { if (video.paused || video.muted) playBtn.hidden = false; }, 2500);
     }
     tick();
     setInterval(tick, 30000);

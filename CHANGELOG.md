@@ -1,5 +1,10 @@
 # Registo de alterações
 
+## 2.5.4 (09/11/2026)
+
+- Save the Date: a data passa a ser revelada quando o dedo sai do ecrã, no mesmo toque em que o vídeo começa com som, como o iPhone exige. Retirado o botão ▶.
+- No primeiro toque, o vídeo começa a carregar sem som por baixo do dourado, para estar pronto na revelação.
+
 ## 2.5.3 (09/11/2026)
 
 - Save the Date: a folha dourada continua a receber o dedo até ele sair do ecrã, para o iPhone não cancelar o toque que inicia o vídeo.
