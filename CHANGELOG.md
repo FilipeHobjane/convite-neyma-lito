@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.5.2 (09/11/2026)
+
+- Save the Date: no iPhone, o vídeo ficava parado quando a data aparecia a meio do gesto de raspar. Agora começa ao levantar o dedo e, se o telemóvel recusar, em cada toque seguinte até tocar com som.
+
 ## 2.5.1 (09/11/2026)
 
 - Save the Date: o vídeo começa com som ao revelar a data, sem botão. Se o navegador recusar, começa sem som e o som entra no toque seguinte.
