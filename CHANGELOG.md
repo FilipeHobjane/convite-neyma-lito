@@ -1,5 +1,12 @@
 # Registo de alterações
 
+## 2.5.6 (09/11/2026)
+
+- Save the Date: o vídeo é descarregado uma única vez, em partes de no máximo dois blocos, e sem endereço até ser preciso. Se a pessoa revelar antes do fim da descarga, toca directamente da rede.
+- Ficheiros: respostas parciais limitadas a dois blocos, e cortadas da cache quando o ficheiro inteiro já lá está, para não exceder o limite de CPU gratuito.
+- Service worker: scripts e estilos vêm sempre da rede, para as correcções chegarem a quem já abriu o convite.
+- O vídeo retoma ao voltar à página.
+
 ## 2.5.5 (09/11/2026)
 
 - Save the Date: no iPhone, o arco ficava escuro alguns segundos depois da revelação, enquanto o vídeo descarregava. O vídeo passa a descarregar assim que a página abre, e a foto fica por cima até ele ter imagem, desvanecendo depois.

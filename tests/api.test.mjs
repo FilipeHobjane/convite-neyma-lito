@@ -356,13 +356,23 @@ test('Save the Date: link geral e pessoal sem dados a mais', async () => {
   await admin('settings', 'PUT', { std_photo: '' });
   assert.equal((await call(`/media/${one}`)).status, 404);
 
-  const clip = await upload(new Uint8Array(1_200_000).map((_, i) => i % 251), 'video/mp4');
+  const clip = await upload(new Uint8Array(2_000_000).map((_, i) => i % 251), 'video/mp4');
   await admin('settings', 'PUT', { std_video: clip });
   assert.equal(boot(await (await call('/guarde-a-data')).text()).s.std_video, clip);
   const part = await call(`/media/${clip}`, { headers: { Range: 'bytes=899990-900009' } });
   assert.equal(part.status, 206);
   assert.equal(part.headers.get('content-type'), 'video/mp4');
   assert.deepEqual([...new Uint8Array(await part.arrayBuffer())], Array.from({ length: 20 }, (_, i) => (899990 + i) % 251));
+  // Pedido aberto: no máximo dois blocos de cada vez, e o resto chega em pedidos seguintes.
+  const open = await call(`/media/${clip}`, { headers: { Range: 'bytes=0-' } });
+  assert.equal(open.status, 206);
+  const firstPart = new Uint8Array(await open.arrayBuffer());
+  assert.equal(open.headers.get('content-range'), `bytes 0-1799999/2000000`);
+  const rest = await call(`/media/${clip}`, { headers: { Range: `bytes=${firstPart.length}-` } });
+  assert.equal(rest.status, 206);
+  const joined = new Uint8Array([...firstPart, ...new Uint8Array(await rest.arrayBuffer())]);
+  assert.equal(joined.length, 2_000_000);
+  assert.ok(joined.every((b, i) => b === i % 251));
   await admin('settings', 'PUT', { std_video: '' });
   assert.equal((await call(`/media/${clip}`)).status, 404);
   assert.equal((await admin('media', 'POST', { mime: 'video/quicktime', name: 'a.mov', size: 10 })).status, 400);

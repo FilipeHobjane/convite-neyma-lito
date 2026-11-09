@@ -50,26 +50,47 @@
   const photoId = s.std_photo || s.cover_image;
   const foil = h('canvas', { class: 'foil', role: 'img', 'aria-label': 'Folha dourada que esconde a data' });
   // Com vídeo, a foto fica por cima até o vídeo ter imagem: nunca aparece o arco vazio.
+  // O vídeo só tem endereço quando é preciso: assim é descarregado uma única vez.
+  const videoUrl = s.std_video ? `/media/${s.std_video}` : '';
   const video = s.std_video ? h('video', {
-    class: 'photo', src: `/media/${s.std_video}`,
-    muted: true, loop: true, playsInline: true, preload: 'auto', 'aria-label': `Vídeo de ${s.couple_display}`,
+    class: 'photo', muted: true, loop: true, playsInline: true, preload: 'auto', 'aria-label': `Vídeo de ${s.couple_display}`,
   }) : null;
   const cover = video && photoId ? h('img', { class: 'photo cover', src: `/media/${photoId}`, alt: '', fetchpriority: 'high' }) : null;
+  const download = new AbortController();
+  // Descarrega em partes pequenas: cada pedido fica leve para o servidor gratuito.
+  async function fetchVideo() {
+    const parts = [];
+    let type = 'video/mp4';
+    for (let start = 0, total = Infinity; start < total;) {
+      const r = await fetch(videoUrl, { headers: { Range: `bytes=${start}-` }, signal: download.signal });
+      if (r.status === 200) return r.blob();
+      if (r.status !== 206) throw new Error(String(r.status));
+      type = r.headers.get('Content-Type') || type;
+      total = Number(/\/(\d+)$/.exec(r.headers.get('Content-Range') || '')?.[1]);
+      const part = await r.arrayBuffer();
+      if (!part.byteLength || !total) throw new Error('resposta vazia');
+      parts.push(part);
+      start += part.byteLength;
+    }
+    return new Blob(parts, { type });
+  }
   if (video) {
     video.setAttribute('playsinline', '');
     video.setAttribute('muted', '');
     if (cover) video.addEventListener('timeupdate', () => { if (!video.paused && video.currentTime > 0.05) cover.classList.add('off'); });
-    // O iPhone só descarrega o vídeo quando ele começa. Descarregado já, enquanto a pessoa lê e raspa,
+    // O iPhone só descarrega um vídeo quando ele começa. Descarregado já, enquanto a pessoa lê e raspa,
     // está pronto no momento da revelação.
-    fetch(video.src).then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status))))).then((blob) => {
+    fetchVideo().then((blob) => {
       if (!finished) video.src = URL.createObjectURL(blob);
-    }).catch(() => { /* continua a usar o endereço normal */ });
+    }).catch(() => { /* na revelação usa o endereço normal */ });
   }
   // O iPhone só deixa iniciar um vídeo com som dentro de um toque. Por isso a data só é revelada
   // quando o dedo sai do ecrã: a revelação e o vídeo acontecem no mesmo toque, que ele aceita.
   let pendingVideo = false;
   function startVideo() {
     if (!pendingVideo) return;
+    // Se a descarga ainda não acabou, pára-a e toca directamente da rede, sem descarregar duas vezes.
+    if (!video.getAttribute('src')) { download.abort(); video.src = videoUrl; }
     video.muted = false;
     video.play().then(() => { pendingVideo = false; }).catch(() => {
       video.muted = true;
@@ -78,6 +99,14 @@
   }
   // Se mesmo assim o telemóvel recusar, qualquer toque seguinte, em qualquer parte do ecrã, volta a tentar.
   if (video) ['touchend', 'pointerup', 'click'].forEach((n) => addEventListener(n, startVideo, { passive: true }));
+  // Ao voltar à página (outra app, ecrã bloqueado), o telemóvel pode ter parado o vídeo: retoma-o.
+  const resume = () => {
+    if (!video || !finished || !video.paused || document.visibilityState !== 'visible') return;
+    pendingVideo = true;
+    startVideo();
+  };
+  document.addEventListener('visibilitychange', resume);
+  addEventListener('pageshow', resume);
   const ticket = h('div', { class: 'ticket' },
     video || (photoId ? h('img', { class: 'photo', src: `/media/${photoId}`, alt: `Fotografia de ${s.couple_display}`, fetchpriority: 'high' }) : null),
     cover,

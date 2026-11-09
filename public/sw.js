@@ -1,6 +1,6 @@
 ﻿// PWA: guarda só ficheiros estáticos e fotografias. Nunca guarda a página nem /api,
 // para o convidado não ver confirmações, prazos ou presentes desactualizados.
-const CACHE = 'convite-v13';
+const CACHE = 'convite-v14';
 const SHELL = ['/offline/', '/css/convite.css', '/js/convite.js', '/icons/favicon.png', '/fonts/cormorant.woff2', '/fonts/cormorant-italic.woff2', '/fonts/jost.woff2'];
 
 self.addEventListener('install', (event) => {
@@ -33,7 +33,15 @@ self.addEventListener('fetch', (event) => {
     })));
     return;
   }
-  if (/^\/(css|js|fonts|icons)\//.test(url.pathname)) {
+  if (/^\/(css|js)\//.test(url.pathname)) {
+    // Sempre a versão mais recente; a guardada só serve sem rede. Assim as correcções chegam a quem já abriu.
+    event.respondWith(fetch(request).then((res) => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(request, copy)); }
+      return res;
+    }).catch(() => caches.match(request).then((hit) => hit || Response.error())));
+    return;
+  }
+  if (/^\/(fonts|icons)\//.test(url.pathname)) {
     // Mostra a versão guardada e actualiza em segundo plano.
     event.respondWith(caches.open(CACHE).then(async (c) => {
       const hit = await c.match(request);

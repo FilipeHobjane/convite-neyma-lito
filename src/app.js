@@ -263,13 +263,30 @@ async function chooseGift(request, env, db, id) {
 
 // ---------- Ficheiros (fotos e música) ----------
 
+// Cada resposta parcial junta no máximo dois blocos: mantém cada pedido longe do limite de CPU
+// gratuito, por maior que seja o ficheiro. Os leitores de vídeo pedem simplesmente o resto a seguir.
+const MAX_RANGE_CHUNKS = 2;
+
 async function serveMedia(request, db, id, ctx) {
   if (!isMediaId(id)) fail(404, 'Não encontrado.');
   const range = request.headers.get('Range');
-  const cache = !range && typeof caches !== 'undefined' ? caches.default : null;
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) {
-    const hit = await cache.match(request);
-    if (hit) return hit;
+    const hit = await cache.match(new Request(request.url));
+    if (hit && !range) return hit;
+    // Ficheiro inteiro já na cache deste centro de dados: corta-se a parte pedida, sem ler a base de dados.
+    const m = hit && /^bytes=(\d+)-(\d*)$/.exec(range || '');
+    if (m) {
+      const all = new Uint8Array(await hit.arrayBuffer());
+      const start = Number(m[1]);
+      const end = Math.min(all.length - 1, m[2] === '' ? all.length - 1 : Number(m[2]));
+      if (start <= end) {
+        return new Response(all.subarray(start, end + 1), {
+          status: 206,
+          headers: { 'Content-Type': hit.headers.get('Content-Type'), 'Content-Length': String(end - start + 1), 'Content-Range': `bytes ${start}-${end}/${all.length}`, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=31536000, immutable', ETag: `"${id}"` },
+        });
+      }
+    }
   }
   const media = await db.prepare('SELECT * FROM media WHERE id=?').bind(id).first();
   if (!media) fail(404, 'Não encontrado.');
@@ -290,6 +307,7 @@ async function serveMedia(request, db, id, ctx) {
     if (start > end || start >= media.size) {
       return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${media.size}` } });
     }
+    end = Math.min(end, (Math.floor(start / media.chunk_size) + MAX_RANGE_CHUNKS) * media.chunk_size - 1);
   }
 
   const first = Math.floor(start / media.chunk_size);
@@ -316,7 +334,7 @@ async function serveMedia(request, db, id, ctx) {
     return new Response(out, { status: 206, headers });
   }
   const res = new Response(out, { status: 200, headers });
-  if (cache && ctx && ctx.waitUntil) {
+  if (cache && !range && ctx && ctx.waitUntil) {
     // A cópia na rede dura um dia: a cache é por centro de dados e só a local pode ser apagada.
     const edge = new Response(out, { status: 200, headers: { ...headers, 'Cache-Control': `public, max-age=${EDGE_CACHE_SECONDS}` } });
     ctx.waitUntil(cache.put(request, edge));
