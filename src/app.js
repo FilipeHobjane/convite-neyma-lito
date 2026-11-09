@@ -12,7 +12,7 @@ import {
 const CHUNK_SIZE = 900_000;
 const MAX_MEDIA_TOTAL = 450_000_000; // abaixo dos 500 MB por base do D1 gratuito
 const MAX_MEDIA_FILE = 30_000_000;
-const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4']);
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/mp4']);
 const LIMITS = {
   rsvp: { max: 15, seconds: 3600 },
   mensagem: { max: 5, seconds: 3600 },
@@ -153,7 +153,7 @@ async function renderInvite(request, env, db, token) {
 }
 
 // Save the Date: recebe só o necessário, sem programa, presentes nem outros dados do convidado.
-const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'event_tz', 'envelope_seal_text', 'std_photo', 'cover_image', 'std_title', 'std_hint', 'std_message', 'std_next', 'color_primary', 'color_gold', 'font_titles', 'font_text'];
+const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'event_tz', 'envelope_seal_text', 'std_photo', 'std_video', 'cover_image', 'std_title', 'std_hint', 'std_message', 'std_next', 'color_primary', 'color_gold', 'font_titles', 'font_text'];
 
 async function renderSaveDate(request, env, db, token) {
   const s = { ...DEFAULT_SETTINGS, ...(await getSettings(db)) };
@@ -364,7 +364,7 @@ async function putChunk(request, db, id, idx) {
 // ---------- Administração: validação ----------
 
 const URL_SETTINGS = new Set(['footer_instagram']);
-const MEDIA_SETTINGS = new Set(['std_photo', 'groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
+const MEDIA_SETTINGS = new Set(['std_photo', 'std_video','groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
 
 function cleanSetting(key, raw) {
   const value = str(raw, key === 'relation_templates' ? 40000 : 6000);

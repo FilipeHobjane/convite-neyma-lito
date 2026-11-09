@@ -573,7 +573,36 @@
         h('p', null, h('a', { href: '/guarde-a-data', target: '_blank', rel: 'noopener' }, `${location.origin}/guarde-a-data`)),
         h('p', { class: 'muted' }, 'Para mostrar o nome de cada pessoa, envie por Enviar pelo WhatsApp. A data é a de Data e confirmações.')),
       h('div', { class: 'card' }, h('h2', null, 'Fotografia'),
-        imageSetting('Aparece ao raspar. Ao alto fica melhor, com os rostos a meio ou acima do meio. Sem foto, usa a capa do convite.', 'std_photo')),
+        imageSetting('Aparece ao raspar. Ao alto fica melhor, com os rostos a meio ou acima do meio. Sem foto, usa a capa do convite. Com vídeo, a foto aparece enquanto ele carrega.', 'std_photo')),
+      (() => {
+        const d = D.settings;
+        const status = h('p', { class: 'muted', role: 'status' });
+        return h('div', { class: 'card' }, h('h2', null, 'Vídeo'),
+          h('p', { class: 'muted' }, 'Se carregar um vídeo, é ele que aparece ao raspar, em vez da foto. Começa sem som e repete-se; o convidado pode ligar o som.'),
+          d.std_video ? h('video', { class: 'space', controls: true, playsInline: true, preload: 'metadata', src: media(d.std_video) }) : h('p', { class: 'space' }, 'Nenhum vídeo carregado.'),
+          h('div', { class: 'row space' },
+            h('label', { class: 'btn alt file' }, d.std_video ? 'Substituir vídeo' : 'Carregar vídeo', h('input', {
+              type: 'file', accept: 'video/mp4,video/webm,.mp4,.webm',
+              onchange: async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const type = /\.webm$/i.test(file.name) ? 'video/webm' : /\.(mp4|m4v)$/i.test(file.name) ? 'video/mp4' : file.type;
+                if (type !== 'video/mp4' && type !== 'video/webm') {
+                  status.textContent = 'Use um vídeo .mp4. Os vídeos .mov do iPhone não abrem em muitos telemóveis Android: exporte-o como MP4 (no iPhone, partilhe pelo WhatsApp para si próprio e guarde, ou use um conversor).';
+                  return;
+                }
+                if (file.size > 30e6) { status.textContent = `O vídeo tem ${mb(file.size)}. O máximo é 30 MB; o ideal é menos de 8 MB, para poupar os dados móveis dos convidados.`; return; }
+                status.textContent = `A carregar ${mb(file.size)}…`;
+                act(async () => {
+                  const id = await uploadBlob(file, type, file.name);
+                  await api('settings', 'PUT', { std_video: id });
+                }, 'Vídeo carregado.');
+              },
+            })),
+            d.std_video ? h('button', { class: 'btn bad', type: 'button', onclick: () => { if (confirm('Retirar o vídeo? O Save the Date volta a mostrar a foto.')) act(() => api('settings', 'PUT', { std_video: '' }), 'Vídeo retirado.'); } }, 'Retirar vídeo') : null),
+          status,
+          h('p', { class: 'muted space' }, 'Recomendado: MP4, ao alto, 10 a 20 segundos, menos de 8 MB. Cada convidado descarrega o vídeo inteiro, por isso um ficheiro leve abre mais depressa e gasta menos dados.'));
+      })(),
       settingsForm('Textos', [
         { k: 'show_savedate', l: 'Save the Date activo (desligado, os links abrem o convite)', t: 'check' },
         { k: 'std_title', l: 'Título (aparece em maiúsculas)' }, { k: 'std_hint', l: 'Instrução para raspar' },

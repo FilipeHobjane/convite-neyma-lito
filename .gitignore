@@ -17,3 +17,17 @@ node_modules/
 
 # Originais preservados localmente
 _originais/
+
+# Versão Flask antiga, guardada só neste computador
+_flask/
+app.py
+config.py
+Convite_Casamento.ipynb
+Procfile
+render.yaml
+requirements.txt
+static/
+templates/
+uploads/
+__pycache__/
+database.db

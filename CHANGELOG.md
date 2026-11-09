@@ -1,5 +1,10 @@
 # Registo de alterações
 
+## 2.5.0 (09/11/2026)
+
+- Save the Date: vídeo opcional (MP4 ou WebM, até 30 MB) por baixo do dourado. Começa sem som, repete-se e tem botão para ligar o som; a foto serve de imagem de espera.
+- Retirada a opção de mostrar a data sem raspar.
+
 ## 2.4.0 (31/10/2026)
 
 - Save the Date: título SAVE THE DATE em maiúsculas douradas.

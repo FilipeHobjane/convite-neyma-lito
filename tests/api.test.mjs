@@ -356,6 +356,17 @@ test('Save the Date: link geral e pessoal sem dados a mais', async () => {
   await admin('settings', 'PUT', { std_photo: '' });
   assert.equal((await call(`/media/${one}`)).status, 404);
 
+  const clip = await upload(new Uint8Array(1_200_000).map((_, i) => i % 251), 'video/mp4');
+  await admin('settings', 'PUT', { std_video: clip });
+  assert.equal(boot(await (await call('/guarde-a-data')).text()).s.std_video, clip);
+  const part = await call(`/media/${clip}`, { headers: { Range: 'bytes=899990-900009' } });
+  assert.equal(part.status, 206);
+  assert.equal(part.headers.get('content-type'), 'video/mp4');
+  assert.deepEqual([...new Uint8Array(await part.arrayBuffer())], Array.from({ length: 20 }, (_, i) => (899990 + i) % 251));
+  await admin('settings', 'PUT', { std_video: '' });
+  assert.equal((await call(`/media/${clip}`)).status, 404);
+  assert.equal((await admin('media', 'POST', { mime: 'video/quicktime', name: 'a.mov', size: 10 })).status, 400);
+
   await admin('settings', 'PUT', { show_savedate: '0' });
   const off = await call(`/guarde-a-data/${item.token}`);
   assert.equal(off.status, 302);

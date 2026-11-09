@@ -28,6 +28,7 @@ A execução na Cloudflare encontrou um defeito que o Node não mostrava (foto e
 | Selo, carta, capítulos, pétalas, passe e imagem do passe | OK a 375 px; a vibração e a partilha da imagem precisam de telemóvel real |
 | Painel: Carta e história, saudação e mensagem do convidado | OK a 375 px |
 | Save the Date: raspar, foto, data, pétalas e contagem | OK a 375 px com gestos simulados; raspar com o dedo e abrir o ficheiro da agenda precisam de telemóvel real |
+| Save the Date com vídeo WebM: pausa antes de raspar, toca sem som depois, botão de som | OK no Chromium a 375 px; MP4 e iPhone por confirmar em aparelho real |
 | Excel: modelo aberto no Excel 16, preenchido e guardado, depois importado com acentos e telefones em vários formatos | OK |
 | Enviar: botão bloqueado sem confirmação, mensagem e número correctos, registo de abertura | OK sem abrir o WhatsApp real |
 | Erros na consola | Só os 401/404 esperados dos próprios testes |

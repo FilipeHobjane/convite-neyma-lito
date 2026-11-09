@@ -49,8 +49,23 @@
   // ---------- Página ----------
   const photoId = s.std_photo || s.cover_image;
   const foil = h('canvas', { class: 'foil', role: 'img', 'aria-label': 'Folha dourada que esconde a data' });
+  // Com vídeo, a foto serve de imagem de espera. Começa sem som: os telemóveis só deixam tocar assim.
+  const video = s.std_video ? h('video', {
+    class: 'photo', src: `/media/${s.std_video}`, poster: photoId ? `/media/${photoId}` : null,
+    muted: true, loop: true, playsInline: true, preload: 'metadata', 'aria-label': `Vídeo de ${s.couple_display}`,
+  }) : null;
+  if (video) video.setAttribute('playsinline', '');
+  const sound = video ? h('button', {
+    class: 'sound', type: 'button', hidden: true, 'aria-pressed': 'false',
+    onclick: () => {
+      video.muted = !video.muted;
+      sound.setAttribute('aria-pressed', String(!video.muted));
+      sound.textContent = video.muted ? 'Ligar som' : 'Desligar som';
+      if (video.paused) video.play().catch(() => {});
+    },
+  }, 'Ligar som') : null;
   const ticket = h('div', { class: 'ticket' },
-    photoId ? h('img', { class: 'photo', src: `/media/${photoId}`, alt: `Fotografia de ${s.couple_display}`, fetchpriority: 'high' }) : null,
+    video || (photoId ? h('img', { class: 'photo', src: `/media/${photoId}`, alt: `Fotografia de ${s.couple_display}`, fetchpriority: 'high' }) : null),
     h('div', { class: 'date' }, h('small', null, weekday), h('b', null, d), h('em', null, `${MONTHS[m - 1]} de ${y}`)),
     foil);
   const dias = h('b', null, '0');
@@ -59,7 +74,7 @@
   const count = h('div', { class: 'count', role: 'timer' },
     h('div', null, dias, h('small', null, 'Dias')), h('div', null, horas, h('small', null, 'Horas')), h('div', null, mins, h('small', null, 'Min')));
   const after = h('div', { class: 'after', hidden: true },
-    h('p', { class: 'line' }, s.std_message), count,
+    sound, h('p', { class: 'line' }, s.std_message), count,
     h('button', { class: 'btn', type: 'button', onclick: downloadIcs }, 'Guardar na agenda'),
     s.std_next ? h('p', { class: 'next' }, s.std_next) : null);
   const before = h('p', { class: 'hint' }, s.std_hint);
@@ -155,6 +170,9 @@
     ticket.classList.add('done');
     before.hidden = true;
     after.hidden = false;
+    if (video) {
+      video.play().then(() => { sound.hidden = false; }).catch(() => { video.controls = true; });
+    }
     tick();
     setInterval(tick, 30000);
     try { if (navigator.vibrate) navigator.vibrate([20, 40, 70]); } catch { /* opcional */ }
