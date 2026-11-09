@@ -49,12 +49,22 @@
   // ---------- Página ----------
   const photoId = s.std_photo || s.cover_image;
   const foil = h('canvas', { class: 'foil', role: 'img', 'aria-label': 'Folha dourada que esconde a data' });
-  // Com vídeo, a foto serve de imagem de espera. O vídeo toca com som ao revelar a data.
+  // Com vídeo, a foto fica por cima até o vídeo ter imagem: nunca aparece o arco vazio.
   const video = s.std_video ? h('video', {
-    class: 'photo', src: `/media/${s.std_video}`, poster: photoId ? `/media/${photoId}` : null,
+    class: 'photo', src: `/media/${s.std_video}`,
     muted: true, loop: true, playsInline: true, preload: 'auto', 'aria-label': `Vídeo de ${s.couple_display}`,
   }) : null;
-  if (video) { video.setAttribute('playsinline', ''); video.setAttribute('muted', ''); }
+  const cover = video && photoId ? h('img', { class: 'photo cover', src: `/media/${photoId}`, alt: '', fetchpriority: 'high' }) : null;
+  if (video) {
+    video.setAttribute('playsinline', '');
+    video.setAttribute('muted', '');
+    if (cover) video.addEventListener('timeupdate', () => { if (!video.paused && video.currentTime > 0.05) cover.classList.add('off'); });
+    // O iPhone só descarrega o vídeo quando ele começa. Descarregado já, enquanto a pessoa lê e raspa,
+    // está pronto no momento da revelação.
+    fetch(video.src).then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status))))).then((blob) => {
+      if (!finished) video.src = URL.createObjectURL(blob);
+    }).catch(() => { /* continua a usar o endereço normal */ });
+  }
   // O iPhone só deixa iniciar um vídeo com som dentro de um toque. Por isso a data só é revelada
   // quando o dedo sai do ecrã: a revelação e o vídeo acontecem no mesmo toque, que ele aceita.
   let pendingVideo = false;
@@ -68,17 +78,9 @@
   }
   // Se mesmo assim o telemóvel recusar, qualquer toque seguinte, em qualquer parte do ecrã, volta a tentar.
   if (video) ['touchend', 'pointerup', 'click'].forEach((n) => addEventListener(n, startVideo, { passive: true }));
-  // No primeiro toque, o vídeo começa a carregar e a correr sem som por baixo do dourado,
-  // para estar pronto quando a data aparecer.
-  let primed = false;
-  function prime() {
-    if (!video || primed || finished) return;
-    primed = true;
-    video.muted = true;
-    video.play().catch(() => { primed = false; });
-  }
   const ticket = h('div', { class: 'ticket' },
     video || (photoId ? h('img', { class: 'photo', src: `/media/${photoId}`, alt: `Fotografia de ${s.couple_display}`, fetchpriority: 'high' }) : null),
+    cover,
     h('div', { class: 'date' }, h('small', null, weekday), h('b', null, d), h('em', null, `${MONTHS[m - 1]} de ${y}`)),
     foil);
   const dias = h('b', null, '0');
@@ -166,7 +168,7 @@
     last = p;
   });
   // Ao levantar o dedo: no toque, o iPhone só aceita iniciar o vídeo no touchend; com o rato, no pointerup.
-  const lift = () => { drawing = false; if (finished) return; check(); prime(); };
+  const lift = () => { drawing = false; if (finished) return; check(); };
   foil.addEventListener('touchend', lift);
   foil.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') lift(); });
   foil.addEventListener('pointercancel', () => { drawing = false; });

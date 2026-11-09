@@ -29,6 +29,8 @@ button{font:inherit;color:inherit}
 .ticket{position:relative;width:min(100%,290px);aspect-ratio:.82;overflow:hidden;color:var(--cream);background:linear-gradient(170deg,#c9a06a,#7a4a3a 62%,#431319);border-radius:145px 145px 3px 3px;box-shadow:0 0 0 1px var(--primary),0 0 0 2px var(--gold-light),0 24px 46px -18px rgba(0,0,0,.6);transition:transform .9s var(--ease)}
 .ticket.done{transform:scale(1.02)}
 .photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo.cover{transition:opacity .6s var(--ease)}
+.photo.cover.off{opacity:0}
 .date{position:absolute;inset:auto 0 0;display:flex;flex-direction:column;align-items:center;padding:64px 14px 16px;background:linear-gradient(transparent,rgba(30,8,12,.82) 58%)}
 .date small{font-size:.66rem;letter-spacing:.26em;text-transform:uppercase}
 .date b{font-family:var(--font-titles);font-weight:400;font-size:4.4rem;line-height:.98;font-variant-numeric:lining-nums}

@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.5.5 (09/11/2026)
+
+- Save the Date: no iPhone, o arco ficava escuro alguns segundos depois da revelação, enquanto o vídeo descarregava. O vídeo passa a descarregar assim que a página abre, e a foto fica por cima até ele ter imagem, desvanecendo depois.
+
 ## 2.5.4 (09/11/2026)
 
 - Save the Date: a data passa a ser revelada quando o dedo sai do ecrã, no mesmo toque em que o vídeo começa com som, como o iPhone exige. Retirado o botão ▶.
