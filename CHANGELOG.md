@@ -1,5 +1,10 @@
 # Registo de alterações
 
+## 2.5.3 (09/11/2026)
+
+- Save the Date: a folha dourada continua a receber o dedo até ele sair do ecrã, para o iPhone não cancelar o toque que inicia o vídeo.
+- Se mesmo assim o telemóvel recusar o vídeo, aparece um botão ▶ por cima dele, que o inicia com som.
+
 ## 2.5.2 (09/11/2026)
 
 - Save the Date: no iPhone, o vídeo ficava parado quando a data aparecia a meio do gesto de raspar. Agora começa ao levantar o dedo e, se o telemóvel recusar, em cada toque seguinte até tocar com som.

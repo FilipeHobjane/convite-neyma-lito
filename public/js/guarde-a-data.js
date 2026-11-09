@@ -58,17 +58,23 @@
   // O iPhone só deixa iniciar um vídeo dentro de um toque (ao levantar o dedo), e a data pode
   // aparecer a meio do gesto. Enquanto o vídeo não tocar com som, cada toque volta a tentar.
   let pendingVideo = false;
+  // Só aparece se o telemóvel recusar o vídeo: um toque nele é sempre aceite.
+  const playBtn = video ? h('button', { class: 'play', type: 'button', hidden: true, 'aria-label': 'Ver o vídeo', onclick: () => { pendingVideo = true; startVideo(); } }, '▶') : null;
   function startVideo() {
     if (!pendingVideo) return;
     video.muted = false;
-    video.play().then(() => { pendingVideo = false; }).catch(() => {
+    video.play().then(() => { pendingVideo = false; playBtn.hidden = true; }).catch(() => {
       video.muted = true;
       video.play().catch(() => {});
     });
   }
-  if (video) ['touchend', 'pointerup', 'click'].forEach((n) => addEventListener(n, startVideo, { passive: true }));
+  if (video) {
+    ['touchend', 'pointerup', 'click'].forEach((n) => addEventListener(n, startVideo, { passive: true }));
+    video.addEventListener('playing', () => { if (!video.muted) playBtn.hidden = true; });
+  }
   const ticket = h('div', { class: 'ticket' },
     video || (photoId ? h('img', { class: 'photo', src: `/media/${photoId}`, alt: `Fotografia de ${s.couple_display}`, fetchpriority: 'high' }) : null),
+    playBtn,
     h('div', { class: 'date' }, h('small', null, weekday), h('b', null, d), h('em', null, `${MONTHS[m - 1]} de ${y}`)),
     foil);
   const dias = h('b', null, '0');
@@ -156,6 +162,11 @@
     last = p;
   });
   ['pointerup', 'pointercancel'].forEach((n) => foil.addEventListener(n, () => { drawing = false; if (!finished) check(); }));
+  // A folha continua a receber o dedo até ele sair do ecrã: sem isso, o iPhone cancela o toque
+  // e o vídeo não pode arrancar.
+  ['pointerup', 'pointercancel', 'touchend', 'touchcancel'].forEach((n) => foil.addEventListener(n, () => {
+    if (finished) setTimeout(() => foil.classList.remove('held'), 0);
+  }));
 
   function tick() {
     const left = target - Date.now();
@@ -168,6 +179,7 @@
   function finish() {
     if (finished) return;
     finished = true;
+    if (drawing) foil.classList.add('held');
     drawing = false;
     foil.classList.add('gone');
     ticket.classList.add('done');
@@ -177,6 +189,7 @@
       if (video.readyState > 0) video.currentTime = 0;
       pendingVideo = true;
       startVideo();
+      setTimeout(() => { if (video.paused || video.muted) playBtn.hidden = false; }, 2500);
     }
     tick();
     setInterval(tick, 30000);
