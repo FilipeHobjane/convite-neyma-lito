@@ -1,5 +1,13 @@
 # Registo de alterações
 
+## 2.6.0 (09/11/2026)
+
+- Importação: pessoas com o mesmo telefone e primeiros nomes diferentes (por exemplo, um casal) ficam como convidados separados, com aviso na pré-visualização. Telefones em notação científica do Excel são convertidos. Acompanhantes em branco mantêm o valor anterior.
+- Restauro de cópias de uma só vez: os ficheiros são enviados primeiro e os dados trocados numa única transacção. Se falhar, nada muda. As cópias são validadas como dados do painel (tipos de ficheiro, definições).
+- Definições em falta, por exemplo depois de restaurar uma cópia antiga, voltam aos valores iniciais também no servidor.
+- Presentes: só se escolhem com o link pessoal, em nome do convidado.
+- O link pessoal deixa de mostrar o telefone completo do convidado.
+
 ## 2.5.6 (09/11/2026)
 
 - Save the Date: o vídeo é descarregado uma única vez, em partes de no máximo dois blocos, e sem endereço até ser preciso. Se a pessoa revelar antes do fim da descarga, toca directamente da rede.

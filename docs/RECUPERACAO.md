@@ -7,7 +7,7 @@
 3. Escreva `RESTAURAR` quando for pedido.
 4. Aguarde o aviso "Restauro concluído" e confirme convidados e fotografias.
 
-O restauro apaga os dados actuais antes de os repor. Se for interrompido, repita-o: o ficheiro de cópia não é alterado.
+O restauro envia primeiro as fotos, os vídeos e a música e só no fim troca todos os dados, numa única operação. Se for interrompido ou falhar, os dados do site ficam como estavam: basta repeti-lo. A senha mudada no painel não faz parte da cópia; depois de restaurar numa base nova, entre com `ADMIN_PASSWORD`. Cópias muito grandes (mais de cerca de 1,8 MB só de dados, sem contar ficheiros) têm de ser restauradas no computador, como abaixo.
 
 ## Restaurar no computador (o alojamento desapareceu)
 

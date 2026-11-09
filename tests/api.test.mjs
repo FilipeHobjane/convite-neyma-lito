@@ -159,15 +159,23 @@ test('presentes: escolha única, regra por convidado e privacidade', async () =>
   const { categories } = await adminJson('all');
   const a = (await adminJson('gifts', 'POST', { name: 'Tacho', category_id: categories[0].id })).item;
   const b = (await adminJson('gifts', 'POST', { name: 'Copos', category_id: categories[0].id })).item;
+  const one = (await adminJson('guests', 'POST', { name: 'Pessoa Um' })).item;
+  const two = (await adminJson('guests', 'POST', { name: 'Pessoa Dois' })).item;
+  // Sem link pessoal não se escolhe: ninguém esgota a lista com nomes inventados.
+  assert.equal((await call(`/api/presente/${a.id}`, { body: { nome: 'Alguém' } })).status, 403);
+  assert.equal((await call(`/api/presente/${a.id}`, { body: { token: 'inexistente123' } })).status, 403);
   const [r1, r2] = await Promise.all([
-    call(`/api/presente/${a.id}`, { body: { nome: 'Pessoa Um' } }),
-    call(`/api/presente/${a.id}`, { body: { nome: 'Pessoa Dois' } }),
+    call(`/api/presente/${a.id}`, { body: { token: one.token } }),
+    call(`/api/presente/${a.id}`, { body: { token: two.token } }),
   ]);
   assert.deepEqual([r1.status, r2.status].sort(), [200, 409]);
-  const winner = r1.status === 200 ? 'Pessoa Um' : 'Pessoa Dois';
-  assert.equal((await call(`/api/presente/${b.id}`, { body: { nome: winner.toUpperCase() } })).status, 409);
+  const winner = r1.status === 200 ? one : two;
+  assert.equal((await call(`/api/presente/${b.id}`, { body: { token: winner.token } })).status, 409);
   const html = await (await call('/')).text();
-  assert.ok(!html.includes(winner), 'quem escolheu não é público');
+  assert.ok(!html.includes(winner.name), 'quem escolheu não é público');
+  const chosen = (await adminJson('all')).gifts.find((g) => g.id === a.id);
+  assert.equal(chosen.chosen_by, winner.name);
+  for (const g of [one, two]) await admin(`guests/${g.id}`, 'DELETE');
 });
 
 test('autenticação: rotas protegidas, sessão falsa e origem externa', async () => {
@@ -433,6 +441,50 @@ test('importar de novo actualiza a mesma pessoa e mantém o link', async () => {
   assert.equal(after.find((g) => g.name === 'Eva Excel').phone, '+258841110002');
   assert.equal(after.filter((g) => g.name === 'Fred Excel').length, 3);
   for (const g of after) await admin(`guests/${g.id}`, 'DELETE');
+});
+
+test('importar: família com o mesmo telefone, acompanhantes em branco', async () => {
+  const first = await adminJson('guests/import', 'POST', { rows: [
+    { name: 'João Família', phone: '+258842220001', max_companions: 2 },
+    { name: 'Maria Família', phone: '+258842220001', max_companions: 1 },
+    { name: 'João Família', phone: '+258842220001', max_companions: 2 },
+  ] });
+  assert.deepEqual([first.imported, first.updated], [2, 0], 'casal com o mesmo número fica como duas pessoas; linha repetida ignorada');
+  const before = (await adminJson('all')).guests.filter((g) => g.name.endsWith('Família'));
+  const second = await adminJson('guests/import', 'POST', { rows: [
+    { name: 'Maria Família', phone: '842220001', max_companions: null, group_name: 'Família' },
+    { name: 'João Família', phone: '842220001', max_companions: '' },
+  ] });
+  assert.deepEqual([second.imported, second.updated], [0, 2]);
+  const after = (await adminJson('all')).guests.filter((g) => g.name.endsWith('Família'));
+  for (const g of before) {
+    const now = after.find((x) => x.id === g.id);
+    assert.equal(now.name, g.name, 'cada um continua com o seu link');
+    assert.equal(now.max_companions, g.max_companions, 'acompanhantes em branco não apagam o valor');
+  }
+  const page = boot(await (await call(`/c/${before[0].token}`)).text());
+  assert.equal(page.guest.phone, undefined, 'o telefone não sai no link pessoal');
+  assert.equal(page.guest.phone_hint, '001');
+  for (const g of after) await admin(`guests/${g.id}`, 'DELETE');
+});
+
+test('restauro de uma só vez: falha não apaga nada e ficheiros perigosos são recusados', async () => {
+  const before = await adminJson('all');
+  const data = await (await admin('backup/data')).json();
+  // Dois convidados com o mesmo código: a base recusa, o lote inteiro falha e os dados actuais ficam.
+  const twin = { token: 'tokenrepetido1', status: 'pendente', created_at: '2026-01-01' };
+  const broken = { ...data.tables, guests: [...data.tables.guests, { ...twin, id: 999998, name: 'Gémeo A' }, { ...twin, id: 999999, name: 'Gémeo B' }] };
+  assert.equal((await admin('restore/apply', 'POST', { confirm: 'RESTAURAR', tables: broken })).status, 500);
+  assert.equal((await adminJson('all')).guests.length, before.guests.length);
+  assert.equal((await admin('restore/apply', 'POST', { confirm: 'nao', tables: data.tables })).status, 400);
+  assert.equal((await admin('restore/apply', 'POST', { confirm: 'RESTAURAR', tables: { users: [] } })).status, 400);
+  // Cópia com um "ficheiro" HTML: é ignorado, o resto restaura.
+  const evil = { ...data.tables, media: [...data.tables.media, { id: 'f'.repeat(32), mime: 'text/html', name: 'x', size: 10, chunks: 1, chunk_size: 10, created_at: '' }] };
+  assert.equal((await admin('restore/apply', 'POST', { confirm: 'RESTAURAR', tables: evil })).status, 200);
+  assert.equal((await call(`/media/${'f'.repeat(32)}`)).status, 404);
+  const after = await adminJson('all');
+  assert.equal(after.guests.length, before.guests.length);
+  assert.deepEqual(after.settings, before.settings);
 });
 
 test('envio: registar e desmarcar, só com sessão', async () => {

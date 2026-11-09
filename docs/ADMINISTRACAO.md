@@ -17,7 +17,9 @@ Há duas formas de confirmar:
 - **Link pessoal (recomendado):** adicione o convidado e envie o link pelo botão **WhatsApp** ou **Copiar link**. O convite mostra o nome e o limite de acompanhantes, e o convidado pode alterar a resposta até ao prazo. Só assim sabe quem ainda não respondeu.
 - **Link geral:** qualquer pessoa escreve o nome. Pode desligar em **Data e confirmações**.
 
-**Importar do Excel:** em **Convidados → Importar do Excel**, descarregue o modelo, preencha Nome, Telefone, Relação e Acompanhantes e carregue o ficheiro. A Saudação e a Mensagem são opcionais. Antes de gravar, o painel mostra quem é novo, quem será actualizado e os avisos. Importar de novo a mesma pessoa, com o mesmo telefone, mantém o link, a resposta e o registo de envio.
+**Importar do Excel:** em **Convidados → Importar do Excel**, descarregue o modelo, preencha Nome, Telefone, Relação e Acompanhantes e carregue o ficheiro. A Saudação e a Mensagem são opcionais. Antes de gravar, o painel mostra quem é novo, quem será actualizado e os avisos. Importar de novo a mesma pessoa mantém o link, a resposta e o registo de envio. É a mesma pessoa quando tem o mesmo nome, ou o mesmo telefone e o mesmo primeiro nome; pessoas diferentes com o mesmo telefone (por exemplo, um casal) ficam separadas. Acompanhantes em branco mantêm o valor que já tinha.
+
+**Presentes:** só se escolhem a partir do link pessoal, em nome do convidado. No link geral, a lista aparece, mas pede o link pessoal para escolher.
 
 **Modelos:** em **Modelos por relação**, edite os textos de cada nível de proximidade. O nome da relação no Excel tem de coincidir com o do modelo; se não coincidir, usa o modelo geral.
 

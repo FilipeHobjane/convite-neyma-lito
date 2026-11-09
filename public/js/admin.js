@@ -173,7 +173,10 @@
   const firstName = (n) => (n || '').trim().split(/\s+/)[0] || '';
   // Número internacional só com dígitos. Em Moçambique, 9 dígitos a começar por 8 ganham o 258.
   function phoneDigits(raw) {
-    let d = String(raw || '').replace(/\.0+$/, '').replace(/\D/g, '').replace(/^00/, '');
+    let text = String(raw || '').trim();
+    // O Excel pode guardar o número em notação científica, como "8.41234567E+08".
+    if (/^\d+(\.\d+)?e\+?\d+$/i.test(text)) text = String(Math.round(Number(text)));
+    let d = text.replace(/\.0+$/, '').replace(/\D/g, '').replace(/^00/, '');
     if (/^8\d{8}$/.test(d)) d = `258${d}`;
     return /^[1-9]\d{9,14}$/.test(d) ? d : '';
   }
@@ -292,26 +295,35 @@
       const get = (k) => (order[k] >= 0 ? r[order[k]] || '' : '');
       const raw = get('phone');
       const digits = phoneDigits(raw);
-      const companions = Number(get('max_companions') || 0);
-      return { name: get('name'), phone: digits ? `+${digits}` : raw, rawOk: Boolean(digits), group_name: get('group_name'), max_companions: Number.isFinite(companions) ? Math.max(0, Math.floor(companions)) : 0, salutation: get('salutation'), personal_message: get('personal_message') };
+      const rawCompanions = String(get('max_companions')).trim();
+      const companions = Number(rawCompanions);
+      // Em branco: o servidor mantém o valor de quem já existe.
+      const max = rawCompanions === '' ? null : Number.isFinite(companions) ? Math.max(0, Math.floor(companions)) : 0;
+      return { name: get('name'), phone: digits ? `+${digits}` : raw, rawOk: Boolean(digits), group_name: get('group_name'), max_companions: max, salutation: get('salutation'), personal_message: get('personal_message') };
     }).filter((g) => g.name || g.phone);
   }
   function importPreview(rows) {
-    const seen = new Set();
-    const old = D.guests.map((g) => ({ name: fold(g.name), phone: phoneDigits(g.phone) }));
+    // Mesmas regras do servidor: mesmo nome, ou mesmo telefone e mesmo primeiro nome.
+    const last9 = (p) => phoneDigits(p).slice(-9);
+    const firstOf = (n) => fold(n).trim().split(/\s+/)[0];
+    const people = D.guests.map((g) => ({ name: fold(g.name).trim(), first: firstOf(g.name), phone: last9(g.phone), label: g.name, old: true }));
     const items = rows.map((g) => {
       const problems = [];
-      const key = `${fold(g.name)}|${phoneDigits(g.phone)}`;
-      if (g.name.trim().length < 2) problems.push('Sem nome: não será importado');
+      const name = fold(g.name).trim();
+      const phone = last9(g.phone);
+      if (name.length < 2) problems.push('Sem nome: não será importado');
       if (!g.rawOk) problems.push(g.phone ? 'Telefone inválido' : 'Sem telefone');
       if (!knownRelation(g.group_name)) problems.push(g.group_name ? `Relação "${g.group_name}" desconhecida: usa o modelo geral` : 'Sem relação: usa o modelo geral');
-      if (seen.has(key)) problems.push('Linha repetida no ficheiro');
-      seen.add(key);
-      const digits = phoneDigits(g.phone);
-      const exists = old.some((o) => (digits && o.phone === digits) || (o.name === fold(g.name) && (!digits || !o.phone || o.phone === digits)));
-      return { g, problems, exists };
+      const match = people.find((p) => p.name === name && (!phone || !p.phone || p.phone === phone))
+        || (phone && people.find((p) => p.phone === phone && p.first === firstOf(g.name)));
+      const sharing = phone && people.filter((p) => p.phone === phone && p !== match).map((p) => p.label);
+      const repeated = Boolean(match && !match.old);
+      if (repeated) problems.push('Linha repetida no ficheiro: será ignorada');
+      else if (sharing && sharing.length) problems.push(`Mesmo telefone que ${sharing.join(', ')}: fica como pessoa diferente`);
+      if (!match && name.length >= 2) people.push({ name, first: firstOf(g.name), phone, label: g.name, old: false });
+      return { g, problems, exists: Boolean(match && match.old), repeated };
     });
-    const valid = items.filter((i) => i.g.name.trim().length >= 2);
+    const valid = items.filter((i) => i.g.name.trim().length >= 2 && !i.repeated);
     const dlg = h('dialog', { class: 'wide' });
     const close = () => { dlg.close(); dlg.remove(); };
     dlg.append(
@@ -321,7 +333,7 @@
         h('thead', null, h('tr', null, ['Nome', 'Telefone', 'Relação', 'Acomp.', 'Estado'].map((t) => h('th', null, t)))),
         h('tbody', null, items.map((i) => h('tr', null,
           h('td', null, i.g.name || '-'), h('td', null, i.g.phone || '-'), h('td', null, i.g.group_name || '-'), h('td', null, i.g.max_companions),
-          h('td', null, h('span', { class: `tag ${i.exists ? 'pendente' : 'sim'}` }, i.exists ? 'Actualizar' : 'Novo'), i.problems.map((p) => h('div', { class: 'dup' }, p)))))))),
+          h('td', null, h('span', { class: `tag ${i.repeated ? 'nao' : i.exists ? 'pendente' : 'sim'}` }, i.repeated ? 'Ignorada' : i.exists ? 'Actualizar' : 'Novo'), i.problems.map((p) => h('div', { class: 'dup' }, p)))))))),
       h('div', { class: 'row end space' },
         h('button', { class: 'btn alt', type: 'button', onclick: close }, 'Cancelar'),
         h('button', {
@@ -829,26 +841,25 @@
         if (data.format !== 'convite-backup') throw new Error('Este ficheiro não é uma cópia do convite.');
         const answer = prompt(`Isto substitui TODOS os dados actuais pelos de ${data.created_at}.\nEscreva RESTAURAR para continuar.`);
         if (answer !== 'RESTAURAR') { status.textContent = 'Restauro cancelado. Nada foi alterado.'; return; }
-        status.textContent = 'A restaurar dados…';
-        await api('restore/begin', 'POST', { confirm: 'RESTAURAR' });
-        for (const [table, rows] of Object.entries(data.tables)) {
-          let batch = [];
-          let size = 0;
-          for (const row of rows) {
-            const n = JSON.stringify(row).length;
-            if (size + n > 800000 && batch.length) { await api(`restore/table/${table}`, 'POST', { rows: batch }); batch = []; size = 0; }
-            batch.push(row); size += n;
-          }
-          if (batch.length) await api(`restore/table/${table}`, 'POST', { rows: batch });
-        }
-        const metas = Object.fromEntries(data.tables.media.map((m) => [m.id, m]));
+        // Os dados entram todos de uma vez no fim; até lá, o site actual fica intacto.
+        const payload = JSON.stringify({ confirm: 'RESTAURAR', tables: data.tables });
+        if (payload.length > 1_800_000) throw new Error('Esta cópia tem demasiados dados para o restauro pelo painel. Nada foi alterado. Use o restauro no computador (docs/RECUPERACAO.md).');
+        // 1. Fotos, vídeos e música: são acrescentados, sem apagar nada.
+        const media_ = data.tables.media || [];
+        if (media_.length) await api('restore/table/media', 'POST', { rows: media_ });
+        const metas = Object.fromEntries(media_.map((m) => [m.id, m]));
         for (let i = 0; i < (data.files || []).length; i++) {
-          status.textContent = `A restaurar ficheiro ${i + 1} de ${data.files.length}…`;
+          status.textContent = `A enviar ficheiro ${i + 1} de ${data.files.length}… O site actual ainda não foi alterado.`;
           const f = data.files[i];
+          if (!metas[f.id]) continue;
           const bytes = fromB64(f.data);
           const cs = metas[f.id].chunk_size;
           for (let c = 0; c < metas[f.id].chunks; c++) await api(`media/${f.id}/${c}`, 'PUT', bytes.subarray(c * cs, (c + 1) * cs));
         }
+        // 2. Troca de todos os dados numa só operação: ou fica tudo restaurado, ou nada muda.
+        status.textContent = 'A trocar os dados…';
+        await api('restore/apply', 'POST', JSON.parse(payload));
+        status.textContent = '';
         await load(); // redesenha o ecrã, por isso o aviso vem depois
         toast('Restauro concluído.');
       }
@@ -859,7 +870,7 @@
           h('button', { class: 'btn space', type: 'button', onclick: (e) => { e.target.disabled = true; download().catch((x) => { status.textContent = x.message; }).finally(() => { e.target.disabled = false; }); } }, 'Descarregar cópia completa')),
         h('div', { class: 'card' }, h('h2', null, 'Restaurar cópia'),
           h('p', { class: 'muted' }, 'Substitui todos os dados actuais. Descarregue antes uma cópia do estado actual.'),
-          h('label', { class: 'btn bad file space' }, 'Escolher ficheiro de cópia', h('input', { type: 'file', accept: '.json,application/json', onchange: (e) => { if (e.target.files[0]) restore(e.target.files[0]).catch((x) => { status.textContent = x.message; }); } }))),
+          h('label', { class: 'btn bad file space' }, 'Escolher ficheiro de cópia', h('input', { type: 'file', accept: '.json,application/json', onchange: (e) => { if (e.target.files[0]) restore(e.target.files[0]).catch((x) => { status.textContent = `${x.message} Os dados do site não foram alterados; pode tentar de novo.`; }); } }))),
         status,
       ];
     }],

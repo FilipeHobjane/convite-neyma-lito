@@ -499,7 +499,9 @@
     let count = guest ? guest.companions || 0 : 0;
     const err = h('p', { class: 'err', role: 'alert' });
     const nameInput = guest ? null : h('input', { type: 'text', name: 'nome', required: true, maxLength: 120, autocomplete: 'name' });
-    const phone = h('input', { type: 'tel', name: 'telefone', maxLength: 30, autocomplete: 'tel', inputMode: 'tel', placeholder: '+258 …', value: guest ? guest.phone || '' : '' });
+    // Em branco mantém o número que os noivos já têm; só se escreve para o mudar.
+    const hint = guest && guest.phone_hint ? `Já temos o número terminado em ${guest.phone_hint}` : '+258 …';
+    const phone = h('input', { type: 'tel', name: 'telefone', maxLength: 30, autocomplete: 'tel', inputMode: 'tel', placeholder: hint, 'aria-label': hint });
     const notes = h('textarea', { name: 'observacao', rows: 3, maxLength: 1000, value: guest ? guest.notes || '' : '' });
     const trap = h('div', { class: 'hp', 'aria-hidden': 'true' }, h('input', { type: 'text', name: 'website', tabIndex: -1, autocomplete: 'off' }));
     const radio = (value, text) => h('label', null, h('input', { type: 'radio', name: 'status', value, required: true, checked: guest && guest.status === value }), text);
@@ -623,8 +625,9 @@
     const body = h('div', null, h('h4', null, g.name), g.description ? h('p', null, g.description) : null);
     const place = h('div', { class: 'pick' });
     if (!g.available) place.append(h('span', { class: 'taken' }, 'Já escolhido'));
+    else if (!guest || !guest.token) place.append(h('span', { class: 'taken' }, 'Para escolher, abra o convite pelo seu link pessoal.'));
     else {
-      const name = h('input', { type: 'text', required: true, maxLength: 120, placeholder: 'O seu nome', 'aria-label': 'O seu nome', value: guest ? guest.name : '' });
+      const name = h('p', { class: 'taken' }, `Em nome de ${guest.name}`);
       const err = h('p', { class: 'err', role: 'alert' });
       const btn = h('button', { class: 'btn small', type: 'submit' }, 'Escolher');
       place.append(h('form', {
@@ -635,7 +638,7 @@
           btn.disabled = true;
           err.textContent = '';
           try {
-            await post(`/api/presente/${g.id}`, { nome: name.value });
+            await post(`/api/presente/${g.id}`, { token: guest.token });
             g.available = 0;
             place.replaceChildren(h('span', { class: 'taken' }, 'Reservado. Muito obrigado!'));
           } catch (ex) { err.textContent = ex.message; btn.disabled = false; }

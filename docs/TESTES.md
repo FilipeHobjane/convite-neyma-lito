@@ -1,6 +1,6 @@
 # Resultados dos testes (31/10/2026)
 
-## Automáticos: 36 de 36 aprovados em dois ambientes
+## Automáticos: 38 de 38 aprovados em dois ambientes
 
 Executados com `npm test` em Node 22.23.4 e, contra o motor oficial da Cloudflare, em `wrangler pages dev` 4.156.0 com D1 local.
 

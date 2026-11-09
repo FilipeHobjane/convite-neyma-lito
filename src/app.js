@@ -54,7 +54,8 @@ async function rateLimit(db, request, env, bucket) {
 
 async function getSettings(db) {
   const list = await rows(db.prepare(`SELECT key, value FROM settings WHERE key <> 'schema_version'`));
-  return Object.fromEntries(list.map((r) => [r.key, r.value]));
+  // Os valores iniciais cobrem definições em falta (por exemplo, depois de restaurar uma cópia antiga).
+  return { ...DEFAULT_SETTINGS, ...Object.fromEntries(list.map((r) => [r.key, r.value])) };
 }
 
 function deadlineInfo(s) {
@@ -78,7 +79,8 @@ function publicGuest(g, s) {
   if (!g) return g;
   const tpl = guestTemplate(g, s);
   return {
-    token: g.token, name: g.name, phone: g.phone, status: g.status, max_companions: g.max_companions,
+    // O telefone não sai completo: quem receber o link reencaminhado só vê os últimos dígitos.
+    token: g.token, name: g.name, phone_hint: String(g.phone || '').replace(/\D/g, '').slice(-3), status: g.status, max_companions: g.max_companions,
     companions: g.companions, companion_names: parseNames(g.companion_names), notes: g.notes,
     cover_line: tpl.cover_line, salutation: g.salutation || tpl.salutation, personal_message: g.personal_message || tpl.message,
   };
@@ -248,8 +250,10 @@ async function chooseGift(request, env, db, id) {
   const body = await readJson(request, 2_000);
   await rateLimit(db, request, env, 'presente');
   if (body.website) return json({ ok: true });
-  const nome = normalizeName(body.nome);
-  if (nome.length < 2) fail(400, 'Indique o seu nome para escolher o presente.');
+  // Só quem tem link pessoal escolhe: impede que alguém esgote a lista com nomes inventados.
+  const guest = await db.prepare('SELECT name FROM guests WHERE token=?').bind(str(body.token, 40)).first();
+  if (!guest) fail(403, 'Para escolher um presente, abra o convite pelo seu link pessoal.');
+  const nome = guest.name;
   const settings = await getSettings(db);
   const onePerGuest = settings.gift_one_per_guest === '1' ? 1 : 0;
   // Actualização atómica: se duas pessoas escolherem ao mesmo tempo, só uma fica com o presente.
@@ -574,38 +578,42 @@ async function importGuests(request, db) {
   const { rows: list } = await readJson(request, 1_000_000);
   if (!Array.isArray(list) || list.length > 2000) fail(400, 'Lista inválida (máximo 2000 linhas).');
   const now = nowIso();
+  // Acompanhantes em branco: numa pessoa nova vale 0; numa actualização mantém o valor que já tinha.
+  const blank = (v) => v === null || v === undefined || String(v).trim() === '';
   const clean = list.map((r) => ({
     name: normalizeName(r.name), phone: str(r.phone, 30), group_name: str(r.group_name, 80),
-    max_companions: int(r.max_companions, 0, 50, 0), token: randomToken(), status: 'pendente',
+    max_companions: blank(r.max_companions) ? null : int(r.max_companions, 0, 50, 0), token: randomToken(), status: 'pendente',
     companions: 0, companion_names: '[]', notes: '', admin_notes: '', source: 'lista', created_at: now,
     salutation: str(r.salutation, 80), personal_message: str(r.personal_message, 600),
   })).filter((r) => r.name.length >= 2);
   // Importar de novo actualiza a mesma pessoa: mantém o link, a resposta e o registo de envio.
-  const existing = await rows(db.prepare('SELECT id, name, phone FROM guests'));
+  // É a mesma pessoa quando tem o mesmo nome (e telefone compatível) ou o mesmo telefone e o mesmo
+  // primeiro nome. Mesmo telefone com outro primeiro nome é outra pessoa: famílias partilham números.
   const digits = (p) => String(p || '').replace(/\D/g, '').slice(-9);
-  const byPhone = new Map(existing.filter((g) => digits(g.phone).length === 9).map((g) => [digits(g.phone), g.id]));
-  const byName = new Map(existing.map((g) => [foldText(g.name), { id: g.id, phone: digits(g.phone) }]));
+  const first = (n) => foldText(n).split(/\s+/)[0];
+  const people = (await rows(db.prepare('SELECT id, name, phone FROM guests')))
+    .map((g) => ({ id: g.id, name: foldText(g.name), first: first(g.name), phone: digits(g.phone) }));
   const fresh = [];
   const changes = new Map();
   for (const r of clean) {
     const phone = digits(r.phone);
-    const named = byName.get(foldText(r.name));
-    // Mesmo nome com outro telefone é outra pessoa.
-    const id = byPhone.get(phone) || (named && (!phone || !named.phone || phone === named.phone) ? named.id : null);
-    if (id) changes.set(id, { id, name: r.name, phone: r.phone, group_name: r.group_name, max_companions: r.max_companions, salutation: r.salutation, personal_message: r.personal_message });
-    else {
-      fresh.push(r);
-      if (phone.length === 9) byPhone.set(phone, -1);
-      if (!named) byName.set(foldText(r.name), { id: -1, phone });
+    const name = foldText(r.name);
+    const match = people.find((p) => p.name === name && (!phone || !p.phone || p.phone === phone))
+      || (phone.length === 9 && people.find((p) => p.phone === phone && p.first === first(r.name)));
+    if (match && match.id < 0) continue; // linha repetida no próprio ficheiro
+    if (match) {
+      changes.set(match.id, { id: match.id, name: r.name, phone: r.phone, group_name: r.group_name, max_companions: r.max_companions, salutation: r.salutation, personal_message: r.personal_message });
+    } else {
+      fresh.push({ ...r, max_companions: r.max_companions ?? 0 });
+      people.push({ id: -1, name, first: first(r.name), phone });
     }
   }
-  changes.delete(-1); // linha repetida no próprio ficheiro
   const updates = [...changes.values()];
   if (fresh.length) await bulkInsert(db, 'guests', Object.keys(fresh[0]), fresh);
   if (updates.length) {
     const col = (c) => `(SELECT json_extract(j.value,'$.${c}') FROM json_each(?1) j WHERE json_extract(j.value,'$.id') = guests.id)`;
     const keep = (c) => `${c} = COALESCE(NULLIF(${col(c)},''), ${c})`;
-    await db.prepare(`UPDATE guests SET name=${col('name')}, ${keep('phone')}, ${keep('group_name')}, max_companions=${col('max_companions')}, ${keep('salutation')}, ${keep('personal_message')} WHERE id IN (SELECT json_extract(value,'$.id') FROM json_each(?1))`)
+    await db.prepare(`UPDATE guests SET name=${col('name')}, ${keep('phone')}, ${keep('group_name')}, ${keep('max_companions')}, ${keep('salutation')}, ${keep('personal_message')} WHERE id IN (SELECT json_extract(value,'$.id') FROM json_each(?1))`)
       .bind(JSON.stringify(updates)).run();
   }
   return json({ ok: true, imported: fresh.length, updated: updates.length });
@@ -662,12 +670,52 @@ async function restoreBegin(request, db) {
   return json({ ok: true });
 }
 
+// Uma cópia pode vir de fora: valida-se como se fosse escrita no painel, para não trazer
+// ficheiros de tipo perigoso nem definições inválidas.
+function sanitizeRows(table, list) {
+  if (!Array.isArray(list)) fail(400, `Dados inválidos em ${table}.`);
+  if (table === 'settings') {
+    return list.filter((r) => r && r.key !== 'schema_version' && Object.hasOwn(DEFAULT_SETTINGS, r.key)).flatMap((r) => {
+      try { return [{ key: r.key, value: cleanSetting(r.key, r.value ?? '') }]; } catch { return []; }
+    });
+  }
+  if (table === 'media') {
+    return list.filter((r) => r && isMediaId(r.id) && ALLOWED_MIME.has(r.mime)).map((r) => ({
+      ...r, size: int(r.size, 1, MAX_MEDIA_FILE, 0), chunks: int(r.chunks, 1, 1000, 0), chunk_size: int(r.chunk_size, 1, CHUNK_SIZE, 0),
+    })).filter((r) => r.size && r.chunks && r.chunk_size);
+  }
+  if (table === 'guests') return list.filter((r) => r && /^[\w-]{8,40}$/.test(String(r.token || '')) && String(r.name || '').trim());
+  return list;
+}
+
 async function restoreTable(request, db, table) {
   const cols = Object.hasOwn(BACKUP_TABLES, table) ? BACKUP_TABLES[table] : fail(404, 'Tabela desconhecida.');
   const { rows: list } = await readJson(request, 1_900_000);
-  if (!Array.isArray(list)) fail(400, 'Dados inválidos.');
-  if (list.length) await bulkInsert(db, table, cols, list.filter((r) => r.key !== 'schema_version'), 'INSERT OR REPLACE');
-  return json({ ok: true, count: list.length });
+  const clean = sanitizeRows(table, list);
+  if (clean.length) await bulkInsert(db, table, cols, clean, 'INSERT OR REPLACE');
+  return json({ ok: true, count: clean.length });
+}
+
+// Restauro de uma só vez: apagar e repor acontecem no mesmo lote do D1, que é uma transacção.
+// Se algo falhar, nada muda. Os ficheiros são enviados antes (são novos ou iguais) e os que
+// deixarem de ser usados são apagados no fim.
+async function restoreApply(request, db) {
+  const { confirm, tables } = await readJson(request, 1_900_000);
+  if (confirm !== 'RESTAURAR') fail(400, 'Confirmação em falta.');
+  if (!tables || typeof tables !== 'object') fail(400, 'Dados inválidos.');
+  for (const t of Object.keys(tables)) if (!Object.hasOwn(BACKUP_TABLES, t)) fail(400, `Tabela desconhecida: ${t}.`);
+  const statements = [];
+  for (const [table, cols] of Object.entries(BACKUP_TABLES)) {
+    statements.push(db.prepare(table === 'settings' ? `DELETE FROM settings WHERE key <> 'schema_version'` : `DELETE FROM ${table}`));
+    const clean = sanitizeRows(table, tables[table] || []);
+    if (clean.length) {
+      const select = cols.map((c) => `json_extract(value,'$.${c}')`).join(',');
+      statements.push(db.prepare(`INSERT INTO ${table}(${cols.join(',')}) SELECT ${select} FROM json_each(?)`).bind(JSON.stringify(clean)));
+    }
+  }
+  statements.push(db.prepare('DELETE FROM media_chunks WHERE media_id NOT IN (SELECT id FROM media)'));
+  await db.batch(statements);
+  return json({ ok: true });
 }
 
 // ---------- Autenticação ----------
@@ -747,6 +795,7 @@ async function adminRoutes(request, env, db, path, method) {
   if (path === 'export/guests.csv' && method === 'GET') return exportGuests(db);
   if (path === 'media' && method === 'POST') return createMedia(request, db);
   if (path === 'restore/begin' && method === 'POST') return restoreBegin(request, db);
+  if (path === 'restore/apply' && method === 'POST') return restoreApply(request, db);
 
   let m;
   if ((m = /^restore\/table\/(\w+)$/.exec(path)) && method === 'POST') return restoreTable(request, db, m[1]);
