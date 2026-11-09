@@ -52,6 +52,7 @@ button{font:inherit;color:inherit}
 .count b{display:block;font-family:var(--font-titles);font-weight:400;font-size:2rem;line-height:1;font-variant-numeric:lining-nums tabular-nums;color:var(--cream)}
 .count small{font-size:.6rem;letter-spacing:.17em;text-transform:uppercase;opacity:.84}
 .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;max-width:270px;min-height:48px;padding:.6rem 1.2rem;background:var(--gold-light);border:1px solid var(--gold-light);color:#431319;font-size:.74rem;letter-spacing:.15em;text-transform:uppercase;border-radius:2px;font-weight:500;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--gold-light);text-decoration:none}
 .next{font-size:.82rem;opacity:.86;max-width:18rem}
 .petals{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none}
 

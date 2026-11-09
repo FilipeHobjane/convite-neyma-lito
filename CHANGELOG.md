@@ -1,5 +1,13 @@
 # Registo de alterações
 
+## 2.7.0 (09/11/2026)
+
+- Save the Date: conta até à hora do casamento, como o convite. Opção no painel para mostrar "Abrir o convite" depois de raspar. Depois do casamento, agradece em vez de convidar e esconde a agenda e a contagem. A parte revelada é anunciada aos leitores de ecrã.
+- Convite depois do casamento: sem "Até breve!" nem agenda no agradecimento, e a lista de presentes fica encerrada.
+- Cores do dress code também reconhecidas com nomes em português.
+- Painel: progresso em percentagem ao carregar o vídeo, envio incompleto apagado, e confirmação antes de remover imagens, retirar o vídeo, desmarcar um envio ou eliminar um convidado.
+- Textos iniciais em português de Moçambique (para novos convites).
+
 ## 2.6.0 (09/11/2026)
 
 - Importação: pessoas com o mesmo telefone e primeiros nomes diferentes (por exemplo, um casal) ficam como convidados separados, com aviso na pré-visualização. Telefones em notação científica do Excel são convertidos. Acompanhantes em branco mantêm o valor anterior.

@@ -28,7 +28,11 @@
   const WEEK = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
   const [y, m, d] = (s.wedding_date || '').split('-').map(Number);
   const weekday = d ? WEEK[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] : '';
-  const target = Date.parse(`${s.wedding_date}T00:00:00${s.event_tz || '+02:00'}`);
+  // A mesma hora do convite, para as duas contagens coincidirem.
+  const target = Date.parse(`${s.wedding_date}T${s.wedding_time || '00:00'}:00${s.event_tz || '+02:00'}`);
+  const past = Date.now() > target + 864e5;
+  // O código do link pessoal é o mesmo do convite.
+  const token = (/^\/guarde-a-data\/([\w-]{8,40})/.exec(location.pathname) || [])[1];
   const firstName = (n) => (n || '').trim().split(/\s+/)[0] || '';
 
   function downloadIcs() {
@@ -117,10 +121,12 @@
   const mins = h('b', null, '00');
   const count = h('div', { class: 'count', role: 'timer' },
     h('div', null, dias, h('small', null, 'Dias')), h('div', null, horas, h('small', null, 'Horas')), h('div', null, mins, h('small', null, 'Min')));
-  const after = h('div', { class: 'after', hidden: true },
-    h('p', { class: 'line' }, s.std_message), count,
-    h('button', { class: 'btn', type: 'button', onclick: downloadIcs }, 'Guardar na agenda'),
-    s.std_next ? h('p', { class: 'next' }, s.std_next) : null);
+  // Depois do casamento, a página agradece em vez de convidar.
+  const after = h('div', { class: 'after', hidden: true, 'aria-live': 'polite' },
+    h('p', { class: 'line' }, past ? s.thanks_after_event : s.std_message), past ? null : count,
+    past ? null : h('button', { class: 'btn', type: 'button', onclick: downloadIcs }, 'Guardar na agenda'),
+    s.show_std_invite === '1' ? h('a', { class: 'btn ghost', href: token ? `/c/${token}` : '/' }, past ? 'Ver o convite' : 'Abrir o convite') : null,
+    !past && s.std_next && s.show_std_invite !== '1' ? h('p', { class: 'next' }, s.std_next) : null);
   const before = h('p', { class: 'hint' }, s.std_hint);
   const names = [firstName(s.bride_name), firstName(s.groom_name)];
   app.append(h('main', { class: 'arch' },

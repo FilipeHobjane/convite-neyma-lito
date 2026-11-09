@@ -60,11 +60,18 @@
     bitmap.close();
     return new Promise((ok, no) => canvas.toBlob((b) => (b ? ok(b) : no(new Error('Imagem inválida.'))), 'image/jpeg', quality));
   }
-  async function uploadBlob(blob, mime, name) {
+  // Envia em blocos e mostra o progresso. Se falhar a meio, apaga o que ficou incompleto.
+  async function uploadBlob(blob, mime, name, onProgress) {
     const meta = await api('media', 'POST', { mime, name, size: blob.size });
-    for (let i = 0; i < meta.chunks; i++) {
-      const part = new Uint8Array(await blob.slice(i * meta.chunk_size, (i + 1) * meta.chunk_size).arrayBuffer());
-      await api(`media/${meta.id}/${i}`, 'PUT', part);
+    try {
+      for (let i = 0; i < meta.chunks; i++) {
+        if (onProgress) onProgress(i, meta.chunks);
+        const part = new Uint8Array(await blob.slice(i * meta.chunk_size, (i + 1) * meta.chunk_size).arrayBuffer());
+        await api(`media/${meta.id}/${i}`, 'PUT', part);
+      }
+    } catch (ex) {
+      api(`media/${meta.id}`, 'DELETE').catch(() => {});
+      throw ex;
     }
     return meta.id;
   }
@@ -115,7 +122,7 @@
               try { onChange(await uploadImage(file, maxDim)); } catch (ex) { toast(ex.message, true); }
             },
           })),
-        value ? h('button', { class: 'btn bad sm', type: 'button', onclick: () => onChange('') }, 'Remover') : null)));
+        value ? h('button', { class: 'btn bad sm', type: 'button', onclick: () => { if (confirm('Remover esta imagem? Fica apagada definitivamente.')) onChange(''); } }, 'Remover') : null)));
   }
 
   // ---------- Convidados ----------
@@ -280,7 +287,7 @@
           h('td', null, g[k.col] ? h('span', { class: 'tag sim' }, `Aberto ${fmtDate(g[k.col])}`) : h('span', { class: 'tag pendente' }, 'Por enviar')),
           h('td', null, h('div', { class: 'row' },
             h('button', { class: 'btn sm', type: 'button', onclick: () => sendDialog(g, sendFilter.kind) }, 'Rever e enviar'),
-            g[k.col] ? h('button', { class: 'btn alt sm', type: 'button', onclick: () => act(() => api(`guests/${g.id}/sent`, 'POST', { kind: sendFilter.kind, undo: true }), 'Marcado como não enviado.') }, 'Desmarcar') : null))))
+            g[k.col] ? h('button', { class: 'btn alt sm', type: 'button', onclick: () => { if (confirm(`Marcar ${g.name} como ainda não enviado? A data do envio é apagada.`)) act(() => api(`guests/${g.id}/sent`, 'POST', { kind: sendFilter.kind, undo: true }), 'Marcado como não enviado.'); } }, 'Desmarcar') : null))))
           : h('tr', null, h('td', { colSpan: 4, class: 'muted' }, 'Ninguém nesta lista.'))))),
     ];
   }
@@ -413,7 +420,7 @@
             h('button', { class: 'btn alt sm', type: 'button', onclick: () => navigator.clipboard.writeText(guestLink(g)).then(() => toast('Link copiado.')) }, 'Copiar link'),
             h('button', { class: 'btn alt sm', type: 'button', onclick: () => sendDialog(g, 'invite') }, 'Enviar convite'),
             h('button', { class: 'btn alt sm', type: 'button', onclick: () => sendDialog(g, 'savedate') }, 'Enviar Save the Date'),
-            h('button', { class: 'btn bad sm', type: 'button', onclick: () => { if (confirm(`Eliminar ${g.name}?`)) act(() => api(`guests/${g.id}`, 'DELETE'), 'Eliminado.'); } }, 'Eliminar'))))));
+            h('button', { class: 'btn bad sm', type: 'button', onclick: () => { if (confirm(`Eliminar ${g.name}${g.phone ? ` (${g.phone})` : ''}? A resposta e o link pessoal deixam de existir.`)) act(() => api(`guests/${g.id}`, 'DELETE'), 'Eliminado.'); } }, 'Eliminar'))))));
       if (!list.length) tbody.append(h('tr', null, h('td', { colSpan: 4, class: 'muted' }, 'Nenhum convidado encontrado.')));
     };
     draw();
@@ -604,19 +611,23 @@
                   return;
                 }
                 if (file.size > 30e6) { status.textContent = `O vídeo tem ${mb(file.size)}. O máximo é 30 MB; o ideal é menos de 8 MB, para poupar os dados móveis dos convidados.`; return; }
+                e.target.disabled = true;
                 status.textContent = `A carregar ${mb(file.size)}…`;
                 act(async () => {
-                  const id = await uploadBlob(file, type, file.name);
+                  const id = await uploadBlob(file, type, file.name, (i, n) => {
+                    status.textContent = `A carregar ${Math.round((i / n) * 100)}% (${mb(file.size)}). Não feche esta página.`;
+                  });
                   await api('settings', 'PUT', { std_video: id });
-                }, 'Vídeo carregado.');
+                }, 'Vídeo carregado.').finally(() => { e.target.disabled = false; });
               },
             })),
-            d.std_video ? h('button', { class: 'btn bad', type: 'button', onclick: () => { if (confirm('Retirar o vídeo? O Save the Date volta a mostrar a foto.')) act(() => api('settings', 'PUT', { std_video: '' }), 'Vídeo retirado.'); } }, 'Retirar vídeo') : null),
+            d.std_video ? h('button', { class: 'btn bad', type: 'button', onclick: () => { if (confirm('Retirar o vídeo? Fica apagado definitivamente e o Save the Date volta a mostrar a foto.')) act(() => api('settings', 'PUT', { std_video: '' }), 'Vídeo retirado.'); } }, 'Retirar vídeo') : null),
           status,
           h('p', { class: 'muted space' }, 'Recomendado: MP4, ao alto, 10 a 20 segundos, menos de 8 MB. Cada convidado descarrega o vídeo inteiro, por isso um ficheiro leve abre mais depressa e gasta menos dados.'));
       })(),
       settingsForm('Textos', [
         { k: 'show_savedate', l: 'Save the Date activo (desligado, os links abrem o convite)', t: 'check' },
+        { k: 'show_std_invite', l: 'Mostrar o botão "Abrir o convite" depois de raspar (em vez do aviso sobre o convite)', t: 'check' },
         { k: 'std_title', l: 'Título (aparece em maiúsculas)' }, { k: 'std_hint', l: 'Instrução para raspar' },
         { k: 'std_message', l: 'Frase depois de raspar', t: 'area', rows: 2 },
         { k: 'std_next', l: 'Aviso sobre o convite', t: 'area', rows: 2 },

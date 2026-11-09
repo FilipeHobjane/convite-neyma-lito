@@ -284,7 +284,9 @@
         h('a', { class: 'btn ghost small', target: '_blank', rel: 'noopener', href: mapHref(safeHref(e.map_url), e.location) }, icon(ICONS.pin), 'Abrir no mapa'))))));
   }
 
-  const SWATCH = { terracotta: '#b5583b', 'dark green': '#22402f', 'cedar rose': '#a9625f', 'bordô': '#5e1f27', 'mocha mousse': '#a47864', 'warm beige': '#d6bea0', brown: '#5b3a29', olive: '#6b6b3a', 'muted teal': '#5d8583', preto: '#111111', 'castanho escuro': '#3b2619', castanho: '#6b4530', camel: '#b98d57', bege: '#d9c6a5' };
+  const SWATCH = { terracotta: '#b5583b', 'dark green': '#22402f', 'cedar rose': '#a9625f', 'bordô': '#5e1f27', 'mocha mousse': '#a47864', 'warm beige': '#d6bea0', brown: '#5b3a29', olive: '#6b6b3a', 'muted teal': '#5d8583', preto: '#111111', 'castanho escuro': '#3b2619', castanho: '#6b4530', camel: '#b98d57', bege: '#d9c6a5',
+    // Os mesmos tons com nome em português.
+    terracota: '#b5583b', 'verde-escuro': '#22402f', 'verde escuro': '#22402f', 'rosa-cedro': '#a9625f', 'rosa cedro': '#a9625f', moca: '#a47864', 'castanho-moca': '#a47864', 'bege quente': '#d6bea0', 'bege-quente': '#d6bea0', 'verde-oliva': '#6b6b3a', 'verde oliva': '#6b6b3a', oliva: '#6b6b3a', 'azul-petróleo': '#5d8583', 'azul petróleo': '#5d8583', 'verde-azulado': '#5d8583', bordo: '#5e1f27', 'castanho-escuro': '#3b2619', caramelo: '#b98d57' };
   function tabs(items) {
     const panel = h('div');
     const btns = items.map((item, i) => h('button', {
@@ -482,12 +484,12 @@
     const personal = guest ? `${location.origin}/c/${guest.token}` : '';
     return h('div', { class: 'thanks', tabindex: '-1' },
       h('svg', { class: 'sealmark', viewBox: '0 0 48 48', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.4', 'aria-hidden': 'true' }, h('circle', { cx: '18', cy: '24', r: '11' }), h('circle', { cx: '30', cy: '24', r: '11' })),
-      h('h3', null, yes ? 'Até breve!' : 'Obrigado'),
+      h('h3', null, yes && !isPast() ? 'Até breve!' : 'Obrigado'),
       h('p', null, yes ? s.thanks_yes : s.thanks_no),
       withPass ? passView() : null,
       list.length ? h('ul', null, list) : null,
       h('div', { class: 'actions' },
-        yes ? calBtn('') : null,
+        yes && !isPast() ? calBtn('') : null,
         yes && events[0] && events[0].location ? h('a', { class: 'btn ghost', target: '_blank', rel: 'noopener', href: mapHref(safeHref(events[0].map_url), events[0].location) }, icon(ICONS.pin), 'Ver o local') : null),
       rsvp.open && personal ? h('p', { style: null }, h('br'),
         h('button', { class: 'link', type: 'button', onclick: () => target.replaceChildren(rsvpForm(target)) }, 'Alterar a minha resposta'), ' · ',
@@ -625,6 +627,7 @@
     const body = h('div', null, h('h4', null, g.name), g.description ? h('p', null, g.description) : null);
     const place = h('div', { class: 'pick' });
     if (!g.available) place.append(h('span', { class: 'taken' }, 'Já escolhido'));
+    else if (isPast()) place.append(h('span', { class: 'taken' }, 'Lista encerrada'));
     else if (!guest || !guest.token) place.append(h('span', { class: 'taken' }, 'Para escolher, abra o convite pelo seu link pessoal.'));
     else {
       const name = h('p', { class: 'taken' }, `Em nome de ${guest.name}`);

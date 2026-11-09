@@ -55,8 +55,8 @@ export const SECTIONS = {
   program: ['Programa', 'O nosso dia', 'Programa'],
   places: ['Localização', 'Como chegar', 'Localização'],
   dress: ['Dress code', 'O que vestir', 'Dress Code'],
-  gallery: ['Galeria', 'Nossos momentos', 'Galeria'],
-  rsvp: ['Confirmação de presença', 'Conto consigo?', 'Confirmação de Presença'],
+  gallery: ['Galeria', 'Os nossos momentos', 'Galeria'],
+  rsvp: ['Confirmação de presença', 'Contamos consigo?', 'Confirmação de Presença'],
   messages: ['Mensagens', 'Palavras de carinho', 'Mensagens aos Noivos'],
   gifts: ['Presentes', 'Se desejar oferecer', 'Presentes'],
   manual: ['Manual do convidado', 'Informações úteis', 'Manual do Bom Convidado'],
@@ -144,7 +144,7 @@ export const DEFAULT_SETTINGS = {
   invite_validity: 'Convite válido para 1 pessoa',
   children_notice: 'Não extensivo a crianças',
   dresscode_text: 'Escolha para ver as sugestões de cores',
-  dresscode_women_colors: 'Terracotta, Dark Green, Cedar Rose, Bordô, Mocha Mousse, Warm Beige, Brown, Olive, Muted Teal',
+  dresscode_women_colors: 'Terracota, Verde-escuro, Rosa-cedro, Bordô, Moca, Bege quente, Castanho, Verde-oliva, Azul-petróleo',
   dresscode_men_colors: 'Preto, Castanho escuro, Castanho, Camel, Bege',
   dresscode_warning: 'Proibido usar a cor branca',
   dresscode_women_image: '',
@@ -172,7 +172,7 @@ export const DEFAULT_SETTINGS = {
   footer_instagram: '',
   footer_whatsapp: '',
   footer_email: '',
-  footer_copyright: '© 2026 Todos os direitos reservados.',
+  footer_copyright: 'Com amor.',
   music_file: '',
   music_enabled: '0',
   cover_image: '',
@@ -192,6 +192,7 @@ export const DEFAULT_SETTINGS = {
   letter_greeting_personal: 'Querido(a) {nome},',
   letter_message: 'Este dia não seria o mesmo sem si. Ficaremos muito felizes por celebrá-lo consigo.',
   show_savedate: '1',
+  show_std_invite: '0',
   std_photo: '',
   std_video: '',
   std_title: 'Save the Date',
@@ -211,17 +212,17 @@ const EV = (time, title, location, order_index) => ({ time, title, location, des
 export const DEFAULT_EVENTS = [
   EV('11h00', 'Cerimónia Religiosa', 'Igreja Santo António da Poliana', 1),
   EV('12h30', 'Cerimónia Civil', 'Igreja Santo António da Poliana', 2),
-  EV('14h00', 'Cocktail Hour', 'Salão de Eventos Tulipa', 3),
+  EV('14h00', 'Cocktail', 'Salão de Eventos Tulipa', 3),
   EV('14h50', 'Corte do Bolo', 'Salão de Eventos Tulipa', 4),
   EV('15h30', "Copo d'Água", 'Salão de Eventos Tulipa', 5),
 ];
 
 export const DEFAULT_STORES = [
   { name: 'Casa das Loiças', description: 'Loja especializada em loiças, vidros e artigos de mesa.', address: 'Avenida Karl Marx', image: '', phone: '', whatsapp: '', map_url: '', order_index: 0 },
-  { name: 'Louça Amiga', description: 'Variedade em louças e utensílios para sua casa.', address: 'Avenida Karl Marx', image: '', phone: '', whatsapp: '', map_url: '', order_index: 1 },
+  { name: 'Louça Amiga', description: 'Variedade em louças e utensílios para a sua casa.', address: 'Avenida Karl Marx', image: '', phone: '', whatsapp: '', map_url: '', order_index: 1 },
 ];
 
-export const DEFAULT_GIFT_CATEGORIES = ['Eletrodomésticos', 'Cozinha', 'Mobília'].map((name, i) => ({ name, image: '', order_index: i }));
+export const DEFAULT_GIFT_CATEGORIES = ['Electrodomésticos', 'Cozinha', 'Mobília'].map((name, i) => ({ name, image: '', order_index: i }));
 
 let readyFor = null;
 

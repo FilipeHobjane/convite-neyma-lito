@@ -155,7 +155,7 @@ async function renderInvite(request, env, db, token) {
 }
 
 // Save the Date: recebe só o necessário, sem programa, presentes nem outros dados do convidado.
-const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'event_tz', 'envelope_seal_text', 'std_photo', 'std_video', 'cover_image', 'std_title', 'std_hint', 'std_message', 'std_next', 'color_primary', 'color_gold', 'font_titles', 'font_text'];
+const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'wedding_time', 'event_tz', 'thanks_after_event', 'show_std_invite', 'envelope_seal_text', 'std_photo', 'std_video', 'cover_image', 'std_title', 'std_hint', 'std_message', 'std_next', 'color_primary', 'color_gold', 'font_titles', 'font_text'];
 
 async function renderSaveDate(request, env, db, token) {
   const s = { ...DEFAULT_SETTINGS, ...(await getSettings(db)) };
