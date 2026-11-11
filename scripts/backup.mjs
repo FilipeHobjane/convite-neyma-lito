@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { once } from 'node:events';
 
 const [site, dest = 'backups'] = process.argv.slice(2);
-const token = process.env.BACKUP_TOKEN;
+const token = (process.env.BACKUP_TOKEN || '').trim();
 if (!site || !token) {
   console.error('Uso: BACKUP_TOKEN=... node scripts/backup.mjs <url-do-site> [pasta]');
   process.exit(2);
@@ -19,7 +19,10 @@ async function get(path) {
   for (let attempt = 1; ; attempt++) {
     try {
       const res = await fetch(new URL(path, site), { headers, signal: AbortSignal.timeout(60_000) });
-      if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+      if (!res.ok) {
+        const detail = await res.json().then((b) => b.error).catch(() => '');
+        throw new Error(`${path}: HTTP ${res.status}${detail ? ` (${detail})` : ''}`);
+      }
       return res;
     } catch (err) {
       if (attempt >= 3 || /HTTP 4\d\d/.test(err.message)) throw err;
@@ -28,6 +31,9 @@ async function get(path) {
   }
 }
 console.log(`A copiar de ${new URL(site).origin}…`);
+// Impressão digital do código: permite comparar com o código guardado, sem o mostrar.
+const { createHash } = await import('node:crypto');
+console.log(`Código: ${token.length} caracteres, impressão digital ${createHash('sha256').update(token).digest('hex').slice(0, 8)}`);
 
 const data = await (await get('/api/admin/backup/data')).json();
 if (data.format !== 'convite-backup') throw new Error('Resposta inesperada do servidor.');

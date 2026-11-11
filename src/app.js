@@ -771,10 +771,14 @@ async function isAdmin(request, env, db) {
 }
 
 // O token de backup só permite leitura de cópias: princípio do menor privilégio.
+// Espaços e quebras de linha ao colar o código não contam: são a causa mais comum de recusa.
 async function hasBackupToken(request, env) {
   const auth = request.headers.get('Authorization') || '';
-  if (!env.BACKUP_TOKEN || env.BACKUP_TOKEN.length < 24 || !auth.startsWith('Bearer ')) return false;
-  return safeEqual(env.SESSION_SECRET || 'convite', auth.slice(7), env.BACKUP_TOKEN);
+  if (!auth.startsWith('Bearer ')) return false;
+  const expected = String(env.BACKUP_TOKEN || '').trim();
+  if (expected.length < 24) fail(503, 'O BACKUP_TOKEN não está configurado no site (ou tem menos de 24 caracteres).');
+  if (!(await safeEqual(env.SESSION_SECRET || 'convite', auth.slice(7).trim(), expected))) fail(401, 'O código de cópia não corresponde ao BACKUP_TOKEN do site.');
+  return true;
 }
 
 function assertSameOrigin(request) {
