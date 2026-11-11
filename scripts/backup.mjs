@@ -14,11 +14,20 @@ if (!site || !token) {
 const KEEP = Number(process.env.BACKUP_KEEP || 30);
 const headers = { Authorization: `Bearer ${token}` };
 
+// Cada pedido tem um limite de tempo e até três tentativas: um pedido sem resposta não encrava a cópia.
 async function get(path) {
-  const res = await fetch(new URL(path, site), { headers });
-  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
-  return res;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await fetch(new URL(path, site), { headers, signal: AbortSignal.timeout(60_000) });
+      if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+      return res;
+    } catch (err) {
+      if (attempt >= 3 || /HTTP 4\d\d/.test(err.message)) throw err;
+      console.error(`${path}: ${err.message}. Nova tentativa (${attempt + 1} de 3)…`);
+    }
+  }
 }
+console.log(`A copiar de ${new URL(site).origin}…`);
 
 const data = await (await get('/api/admin/backup/data')).json();
 if (data.format !== 'convite-backup') throw new Error('Resposta inesperada do servidor.');

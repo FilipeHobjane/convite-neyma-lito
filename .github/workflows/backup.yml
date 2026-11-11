@@ -13,6 +13,8 @@ permissions:
 jobs:
   backup:
     runs-on: ubuntu-latest
+    # A cópia demora segundos. Se algo encravar, pára aos 10 minutos em vez de gastar horas do plano gratuito.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
