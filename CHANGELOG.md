@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.7.2 (11/11/2026)
+
+- Importação do Excel: o painel lê a folha "Exportar para Admin" quando existe, para importar directamente a planilha de convidados (pasta `planilha/`, fora do Git).
+
 ## 2.7.1 (11/11/2026)
 
 - Save the Date com vídeo: abre com um selo "Toque no selo para abrir". Esse toque simples desbloqueia o som no iPhone, que não aceita o gesto de raspar para isso. O vídeo carrega e corre sem som por baixo do dourado e, na revelação, recomeça do início com música, sem mais toques.

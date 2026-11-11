@@ -29,12 +29,14 @@ window.Excel = (() => {
   const tags = (node, name) => [...node.getElementsByTagNameNS('*', name)];
   const column = (ref) => [...ref.replace(/\d/g, '')].reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1;
 
-  // Primeira folha do livro, pela ordem do Excel e não pelo nome do ficheiro.
+  // A folha "Exportar para Admin" da planilha de convidados, se existir; senão, a primeira folha do livro.
   function firstSheet(files) {
     const book = files.get('xl/workbook.xml');
     const rels = files.get('xl/_rels/workbook.xml.rels');
     if (book && rels) {
-      const sheet = tags(xml(book), 'sheet')[0];
+      const sheets = tags(xml(book), 'sheet');
+      const plain = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const sheet = sheets.find((s) => plain(s.getAttribute('name')).startsWith('exportar')) || sheets[0];
       const id = sheet && (sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id') || sheet.getAttribute('r:id'));
       const rel = tags(xml(rels), 'Relationship').find((r) => r.getAttribute('Id') === id);
       if (rel) {

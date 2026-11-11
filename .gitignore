@@ -18,6 +18,9 @@ node_modules/
 # Originais preservados localmente
 _originais/
 
+# Planilha de convidados: vai ter dados pessoais reais
+planilha/
+
 # Versão Flask antiga, guardada só neste computador
 _flask/
 app.py
