@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.7.1 (11/11/2026)
+
+- Save the Date com vídeo: abre com um selo "Toque no selo para abrir". Esse toque simples desbloqueia o som no iPhone, que não aceita o gesto de raspar para isso. O vídeo carrega e corre sem som por baixo do dourado e, na revelação, recomeça do início com música, sem mais toques.
+
 ## 2.7.0 (09/11/2026)
 
 - Save the Date: conta até à hora do casamento, como o convite. Opção no painel para mostrar "Abrir o convite" depois de raspar. Depois do casamento, agradece em vez de convidar e esconde a agenda e a contagem. A parte revelada é anunciada aos leitores de ecrã.

@@ -54,9 +54,14 @@ button{font:inherit;color:inherit}
 .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;max-width:270px;min-height:48px;padding:.6rem 1.2rem;background:var(--gold-light);border:1px solid var(--gold-light);color:#431319;font-size:.74rem;letter-spacing:.15em;text-transform:uppercase;border-radius:2px;font-weight:500;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--gold-light);text-decoration:none}
 .next{font-size:.82rem;opacity:.86;max-width:18rem}
+.gate{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;padding:calc(2rem + env(safe-area-inset-top)) 1.6rem calc(2rem + env(safe-area-inset-bottom));text-align:center;background:var(--primary);background:radial-gradient(120% 70% at 50% 8%,color-mix(in srgb,var(--primary) 78%,#fff 10%),var(--primary) 52%,color-mix(in srgb,var(--primary) 72%,#000)),var(--primary);transition:opacity .6s var(--ease),visibility .6s}
+.gate.gone{opacity:0;visibility:hidden}
+.gate-seal{width:104px;height:104px;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--font-titles);font-style:italic;font-weight:600;font-size:1.6rem;color:#f6e4c4;background:var(--primary);background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--primary) 72%,#fff),var(--primary) 62%,color-mix(in srgb,var(--primary) 70%,#000));box-shadow:0 0 0 1px var(--gold-light),0 10px 24px rgba(0,0,0,.45),inset 0 0 0 4px rgba(255,255,255,.08),inset 0 0 0 7px rgba(0,0,0,.1);animation:breathe 2.8s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.05)}}
 .petals{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none}
 
 @media (prefers-reduced-motion:reduce){
   .after>*{animation:none}
-  .ticket,.foil{transition:none}
+  .ticket,.foil,.gate{transition:none}
+  .gate-seal{animation:none}
 }

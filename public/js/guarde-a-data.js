@@ -60,41 +60,27 @@
     class: 'photo', muted: true, loop: true, playsInline: true, preload: 'auto', 'aria-label': `Vídeo de ${s.couple_display}`,
   }) : null;
   const cover = video && photoId ? h('img', { class: 'photo cover', src: `/media/${photoId}`, alt: '', fetchpriority: 'high' }) : null;
-  const download = new AbortController();
-  // Descarrega em partes pequenas: cada pedido fica leve para o servidor gratuito.
-  async function fetchVideo() {
-    const parts = [];
-    let type = 'video/mp4';
-    for (let start = 0, total = Infinity; start < total;) {
-      const r = await fetch(videoUrl, { headers: { Range: `bytes=${start}-` }, signal: download.signal });
-      if (r.status === 200) return r.blob();
-      if (r.status !== 206) throw new Error(String(r.status));
-      type = r.headers.get('Content-Type') || type;
-      total = Number(/\/(\d+)$/.exec(r.headers.get('Content-Range') || '')?.[1]);
-      const part = await r.arrayBuffer();
-      if (!part.byteLength || !total) throw new Error('resposta vazia');
-      parts.push(part);
-      start += part.byteLength;
-    }
-    return new Blob(parts, { type });
-  }
   if (video) {
     video.setAttribute('playsinline', '');
     video.setAttribute('muted', '');
     if (cover) video.addEventListener('timeupdate', () => { if (!video.paused && video.currentTime > 0.05) cover.classList.add('off'); });
-    // O iPhone só descarrega um vídeo quando ele começa. Descarregado já, enquanto a pessoa lê e raspa,
-    // está pronto no momento da revelação.
-    fetchVideo().then((blob) => {
-      if (!finished) video.src = URL.createObjectURL(blob);
-    }).catch(() => { /* na revelação usa o endereço normal */ });
   }
-  // O iPhone só deixa iniciar um vídeo com som dentro de um toque. Por isso a data só é revelada
-  // quando o dedo sai do ecrã: a revelação e o vídeo acontecem no mesmo toque, que ele aceita.
+  // O iPhone só deixa um vídeo tocar com som depois de um toque simples; raspar é arrastar e não conta.
+  // O toque no selo de entrada inicia o vídeo com som e pára-o logo: a partir daí o iPhone aceita o som
+  // sem novo toque. O vídeo fica a correr sem som por baixo do dourado, já carregado para a revelação.
+  function unlockVideo() {
+    if (!video) return;
+    if (!video.getAttribute('src')) video.src = videoUrl;
+    video.muted = false;
+    video.play().catch(() => {});
+    video.pause();
+    video.muted = true;
+    video.play().catch(() => {});
+  }
   let pendingVideo = false;
   function startVideo() {
     if (!pendingVideo) return;
-    // Se a descarga ainda não acabou, pára-a e toca directamente da rede, sem descarregar duas vezes.
-    if (!video.getAttribute('src')) { download.abort(); video.src = videoUrl; }
+    if (!video.getAttribute('src')) video.src = videoUrl;
     video.muted = false;
     video.play().then(() => { pendingVideo = false; }).catch(() => {
       video.muted = true;
@@ -129,14 +115,30 @@
     !past && s.std_next && s.show_std_invite !== '1' ? h('p', { class: 'next' }, s.std_next) : null);
   const before = h('p', { class: 'hint' }, s.std_hint);
   const names = [firstName(s.bride_name), firstName(s.groom_name)];
+  const heading = () => h('div', null,
+    h('h1', { class: 'title' }, s.std_title),
+    h('div', { class: 'title-rule' }, h('i')),
+    guest && guest.cover_line ? h('p', { class: 'line-to' }, guest.cover_line) : null,
+    guest ? h('p', { class: 'to' }, guest.cover_line ? guest.name : `Para ${guest.name}`) : null);
   app.append(h('main', { class: 'arch' },
-    h('div', null,
-      h('h1', { class: 'title' }, s.std_title),
-      h('div', { class: 'title-rule' }, h('i')),
-      guest && guest.cover_line ? h('p', { class: 'line-to' }, guest.cover_line) : null,
-      guest ? h('p', { class: 'to' }, guest.cover_line ? guest.name : `Para ${guest.name}`) : null),
+    heading(),
     h('p', { class: 'names' }, names[0], h('i', null, '&'), names[1]),
     ticket, before, after));
+  // Selo de entrada: só existe com vídeo, porque é ele que permite a música começar sozinha.
+  if (video) {
+    const gate = h('div', { class: 'gate' },
+      heading(),
+      h('button', {
+        class: 'gate-seal', type: 'button', 'aria-label': 'Abrir o Save the Date',
+        onclick: () => {
+          unlockVideo();
+          gate.classList.add('gone');
+          setTimeout(() => gate.remove(), 700);
+        },
+      }, s.envelope_seal_text),
+      h('p', { class: 'hint' }, 'Toque no selo para abrir'));
+    document.body.append(gate);
+  }
 
   // ---------- Folha dourada ----------
   const ctx = foil.getContext('2d', { willReadFrequently: true });
