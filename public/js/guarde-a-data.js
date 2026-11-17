@@ -70,7 +70,7 @@
       guest && guest.cover_line ? h('p', { class: 'para' }, guest.cover_line) : null,
       greeting,
       h('p', { class: 'rotulo' }, [s.std_title, s.std_kind].filter(Boolean).join(' · ')),
-      h('h1', { class: 'nomes' }, firstName(s.bride_name), h('span', { class: 'e' }, 'E'), firstName(s.groom_name)),
+      h('h1', { class: 'nomes' }, firstName(s.bride_name), h('span', { class: 'e', 'aria-label': 'e' }, '&'), firstName(s.groom_name)),
       d ? h('p', { class: 'data', 'aria-label': `${d}/${m}/${y}` }, h('span', null, pad(d)), h('i'), h('span', null, pad(m)), h('i'), h('span', null, String(y))) : null,
       h('p', { class: 'data-ext' }, [weekday, s.std_place].filter(Boolean).join(' · '))),
     gallery,

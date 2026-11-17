@@ -354,7 +354,7 @@ test('Save the Date: link geral e pessoal sem dados a mais', async () => {
   assert.equal(data.s.mpesa_number, undefined);
   assert.equal(data.s.wedding_time, '11:00', 'conta até à mesma hora do convite');
   assert.equal(data.s.std_button, 'Aceito reservar este dia');
-  assert.equal(data.s.color_std_bg, '#123f31');
+  assert.equal(data.s.color_std_bg, '#0b2b21');
   for (const secret of ['+258840000001', 'Nota-privada', 'Interna-privada', 'Carta-privada']) assert.ok(!html.includes(secret), secret);
   assert.match(html, /name="robots" content="noindex"/);
 

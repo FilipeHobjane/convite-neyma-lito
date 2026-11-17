@@ -1,7 +1,7 @@
 @font-face{font-family:'Jost';src:url(/fonts/jost.woff2) format('woff2');font-weight:100 900;font-display:swap}
 @font-face{font-family:'Cormorant Garamond';src:url(/fonts/cormorant.woff2) format('woff2');font-weight:300 700;font-display:swap}
-/* Cores do convite Floresta e caramelo: verde-floresta, caramelo, creme e chocolate. */
-:root{--brand:#123f31;--gold:#b07a55;--ink:#3e2418;--muted:#6e5446;--bg:#f6efe6;--card:#fffdf9;--line:#e6d8c8;--cream:#f6efe6;--ok:#2f6b45;--warn:#8a6410;--bad:#9b2c24}
+/* Cores do convite: verde-sálvia escuro, champanhe e marfim. */
+:root{--brand:#0b2b21;--gold:#c9a063;--ink:#3e2418;--muted:#6e5446;--bg:#f6efe6;--card:#fffdf9;--line:#e6d8c8;--cream:#f6efe6;--ok:#2f6b45;--warn:#8a6410;--bad:#9b2c24}
 *{box-sizing:border-box;margin:0}
 body{font-family:Jost,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:16px}
 h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600;line-height:1.15}

@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '9';
+export const SCHEMA_VERSION = '10';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -209,18 +209,18 @@ export const DEFAULT_SETTINGS = {
   std_button: 'Aceito reservar este dia',
   std_tap_hint: 'Toque para abrir o convite',
   std_door_caption: 'A bênção de {casal} espera por si',
-  // Cores do Save the Date (opção "Floresta e caramelo").
-  color_std_bg: '#123f31',
-  color_std_text: '#f6efe6',
-  color_std_soft: '#d9c7b6',
-  color_std_button: '#b07a55',
-  color_std_detail: '#d29a6f',
-  color_std_frame: '#d9c7b6',
+  // Cores do Save the Date e do convite Floresta: verde-sálvia escuro, champanhe e marfim.
+  color_std_bg: '#0b2b21',
+  color_std_text: '#f5e3ce',
+  color_std_soft: '#e3d2bc',
+  color_std_button: '#c9a063',
+  color_std_detail: '#d4a35a',
+  color_std_frame: '#c9a063',
   std_title: 'Save the Date',
   // 'floresta': o convite usa as cores e a letra do Save the Date. 'classico': fundo claro e letra clássica.
   invite_style: 'floresta',
   // Letras do convite no estilo Floresta: o creme quente das horas do programa.
-  color_invite_text: '#dcb491',
+  color_invite_text: '#f5e3ce',
   relation_templates: JSON.stringify(DEFAULT_TEMPLATES),
   std_hint: 'Raspe o dourado com o dedo para descobrir',
   std_message: 'Vamos casar, e este dia só fica completo consigo.',
@@ -288,17 +288,27 @@ export async function ensureSchema(db) {
     }
     await db.prepare(`INSERT OR IGNORE INTO settings(key,value) SELECT key, value FROM json_each(?)`).bind(JSON.stringify(DEFAULT_SETTINGS)).run();
     if (current === null) await seedLists(db);
-    else if (Number(current) < 8) await replaceOldExamples(db);
+    else {
+      if (Number(current) < 8) await replaceOldExamples(db);
+      if (Number(current) < 10) await replaceOld(db, OLD_PALETTE);
+    }
     await db.prepare(`INSERT OR REPLACE INTO settings(key,value) VALUES('schema_version',?)`).bind(SCHEMA_VERSION).run();
   }
   readyFor = db;
 }
 
 // Só troca o que continua exactamente igual ao exemplo antigo: nada do que o casal escreveu se perde.
-async function replaceOldExamples(db) {
-  const pairs = Object.fromEntries(Object.entries(OLD_SETTINGS).map(([k, old]) => [k, { old, new: DEFAULT_SETTINGS[k] }]));
-  await db.prepare(`UPDATE settings SET value = (SELECT json_extract(j.value,'$.new') FROM json_each(?1) j WHERE j.key = settings.key)
+// Paleta anterior ("Floresta e caramelo"). Só muda o que nunca foi alterado no painel.
+const OLD_PALETTE = { color_std_bg: '#123f31', color_std_text: '#f6efe6', color_std_soft: '#d9c7b6', color_std_button: '#b07a55', color_std_detail: '#d29a6f', color_std_frame: '#d9c7b6', color_invite_text: '#dcb491' };
+
+function replaceOld(db, old) {
+  const pairs = Object.fromEntries(Object.entries(old).map(([k, v]) => [k, { old: v, new: DEFAULT_SETTINGS[k] }]));
+  return db.prepare(`UPDATE settings SET value = (SELECT json_extract(j.value,'$.new') FROM json_each(?1) j WHERE j.key = settings.key)
     WHERE value = (SELECT json_extract(j.value,'$.old') FROM json_each(?1) j WHERE j.key = settings.key)`).bind(JSON.stringify(pairs)).run();
+}
+
+async function replaceOldExamples(db) {
+  await replaceOld(db, OLD_SETTINGS);
   const same = (rows, old, cols) => rows.length === old.length
     && rows.every((r, i) => cols.every((c, j) => r[c] === old[i][j]) && !r.description && !r.map_url && !r.image && !r.phone && !r.whatsapp);
   const ev = (await db.prepare(`SELECT time,title,location,description,map_url FROM events ORDER BY order_index,id`).all()).results;

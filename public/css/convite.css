@@ -313,16 +313,19 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
 @media print{.dock,.music,.cover,.toast{display:none}body{padding:0}.reveal{opacity:1;transform:none}}
 
 /* ---------- Estilo "Floresta": a mesma linguagem do Save the Date ----------
-   Fundo verde-floresta, títulos em Cormorant Garamond, texto em Jost, linhas caramelo e molduras creme. As cores vêm de color_std_*. */
+   Fundo verde-sálvia escuro, títulos em Cormorant Garamond, texto em Jost, linhas champanhe e letras marfim. As cores vêm de color_std_*. */
 .floresta{--primary:color-mix(in srgb,var(--bg) 72%,#000);--paper:color-mix(in srgb,var(--bg) 90%,#fff);--deep:color-mix(in srgb,var(--bg) 78%,#000);
   --line:color-mix(in srgb,var(--secondary) 34%,transparent);--font-titles:'Cormorant Garamond',Georgia,serif;--font-text:'Jost',system-ui,sans-serif;--frame:#d9c7b6;--on-button:#1a0f09;--error:#f0a99f;color-scheme:dark}
 .floresta body{font-weight:300}
 .floresta :is(h1,h2,h3,h4){font-weight:400;letter-spacing:0}
 .floresta :is(h1,h2,h3,h4,.hand,.quote,.hero-date,.cover-guest,.cover-names,.prog time,.deadline,.note p,.after-note,.pass-name,.env-letter,.seal-half,.pass-mono,.manual li::before,.cal-title,.stepper output,.pay strong,.item h4,.count b){font-style:normal}
 .floresta :is(.quote,.note p,.hand-msg,.after-note,.deadline){font-weight:400}
-.floresta .hero h1{font-weight:400;letter-spacing:0}
-.floresta .hero h1 i{font-size:.3em;font-weight:300;color:var(--gold);margin:.25em 0}
-.floresta .hero-date{font-family:var(--font-text);font-weight:300;font-size:1rem;letter-spacing:.2em;text-transform:uppercase;color:var(--secondary)}
+.floresta .hero h1{font-weight:500;letter-spacing:0}
+.floresta .hero:not(.photo)::before{border-color:color-mix(in srgb,var(--buttons) 75%,transparent)}
+.floresta .hero .eyebrow{font-family:var(--font-titles);font-size:.95rem;font-weight:600;letter-spacing:.18em}
+.floresta .count b{font-variant-numeric:lining-nums tabular-nums}
+.floresta .hero h1 i{font-size:.42em;font-weight:500;font-style:italic;color:var(--gold);margin:.2em 0}
+.floresta .hero-date{font-family:var(--font-titles);font-weight:500;font-variant-numeric:lining-nums;font-size:clamp(.92rem,4vw,1.15rem);letter-spacing:.12em;text-transform:uppercase;color:var(--secondary)}
 .floresta .count b{font-weight:400}
 .floresta .eyebrow{color:var(--gold)}
 .floresta .rule::before,.floresta .rule::after{background:var(--buttons)}
@@ -340,7 +343,7 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
 .floresta .formal{outline-offset:-8px;outline-color:color-mix(in srgb,var(--buttons) 55%,transparent)}
 .floresta .note{border-left-color:var(--buttons)}
 .floresta .cal-grid .day{background:var(--buttons);color:var(--on-button)}
-/* Botões caramelo */
+/* Botões champanhe */
 .floresta .btn{background:var(--buttons);border-color:var(--buttons);color:var(--on-button);border-radius:999px}
 .floresta .btn:hover{background:color-mix(in srgb,var(--buttons) 86%,#fff)}
 .floresta .btn.ghost{background:transparent;color:var(--text);border-color:var(--buttons)}
