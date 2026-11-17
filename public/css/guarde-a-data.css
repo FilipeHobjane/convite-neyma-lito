@@ -6,7 +6,6 @@
 :root{
   --bg:#0b2b21;--text:#f5e3ce;--soft:#e3d2bc;--button:#c9a063;--on-button:#1a0f09;--detail:#d4a35a;--frame:#c9a063;
   --deep:color-mix(in srgb,var(--bg) 72%,#000);--lift:color-mix(in srgb,var(--bg) 88%,#fff);--line:color-mix(in srgb,var(--soft) 45%,transparent);
-  --madeira:#6b4130;--madeira-veio:#57331f;--madeira-sombra:#2e1a10;--madeira-luz:#8a5c45;--ferro:#0f6b4f;--luz:#eaf4ef;
   --font:'Jost',system-ui,sans-serif;--serif:'Cormorant Garamond',Georgia,serif;--ease:cubic-bezier(.22,.8,.26,1);
   color-scheme:dark;
 }
@@ -50,16 +49,9 @@ button{font:inherit;color:inherit}
 
 .chave{display:flex;flex-direction:column;align-items:center;gap:12px}
 .botao-chave{position:relative;width:164px;height:164px;border-radius:50%;border:0;padding:0;cursor:pointer;background:transparent;-webkit-tap-highlight-color:transparent}
-.botao-chave svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.trilho-anel{fill:none;stroke:var(--line);stroke-width:1}
-.ramo{fill:none;stroke:var(--detail);stroke-width:1.6;stroke-linecap:round;stroke-dasharray:var(--comp);stroke-dashoffset:var(--comp);opacity:.85}
-.botao-chave.aceite .ramo{transition:stroke-dashoffset 1.3s cubic-bezier(.5,0,.3,1);stroke-dashoffset:0}
-.folhinha{fill:#6fb896;transform-box:fill-box;transform-origin:center;transform:scale(0);opacity:0}
-.rosa{transform-box:fill-box;transform-origin:center;transform:scale(0) rotate(-120deg);opacity:0}
-.botao-chave.aceite .rosa{animation:floresce .7s cubic-bezier(.3,1.5,.5,1) both}
-.botao-chave.aceite .folhinha{animation:brota .5s ease-out both}
-@keyframes floresce{0%{transform:scale(0) rotate(-120deg);opacity:0}70%{transform:scale(1.18) rotate(8deg);opacity:1}100%{transform:none;opacity:1}}
-@keyframes brota{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:.9}}
+.botao-chave::before{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid var(--line)}
+.botao-chave::after{content:'';position:absolute;inset:14px;border-radius:50%;border:1px solid color-mix(in srgb,var(--button) 60%,transparent);animation:respira 3.2s ease-in-out infinite}
+@keyframes respira{50%{transform:scale(1.06);opacity:.4}}
 .nucleo{position:absolute;inset:30px;border-radius:50%;background:var(--button);color:var(--on-button);display:grid;place-items:center;padding:10px;
   font-weight:400;font-size:.8rem;line-height:1.25;text-wrap:balance;transition:transform .3s ease,box-shadow .3s ease;box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
 .botao-chave:hover .nucleo{transform:scale(1.03)}
@@ -67,42 +59,34 @@ button{font:inherit;color:inherit}
 .dica{font-size:.75rem;letter-spacing:.08em;color:var(--soft)}
 .erro{font-size:.85rem;color:var(--text);background:var(--deep);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
 
-/* ---------- Porta da igreja ---------- */
-.porta{position:fixed;inset:0;z-index:20;display:grid;place-items:center;visibility:hidden;opacity:0;
-  background:radial-gradient(60rem 40rem at 50% 30%,var(--bg),var(--deep));
+/* ---------- União: duas metades da fotografia juntam-se numa só ---------- */
+.uniao{position:fixed;inset:0;z-index:20;display:grid;place-items:center;visibility:hidden;opacity:0;
+  background:radial-gradient(60rem 40rem at 50% 35%,var(--lift),var(--bg) 55%,var(--deep));
   padding:max(24px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
-  transition:opacity .6s ease,transform 1.2s ease}
-.porta.visivel{visibility:visible;opacity:1}
-.porta.entrar{opacity:0;transform:scale(1.25)}
-.cena{display:flex;flex-direction:column;align-items:center;gap:14px;width:min(86vw,380px)}
-.cruz{width:22px;height:30px;position:relative;opacity:.8}
-.cruz::before,.cruz::after{content:'';position:absolute;background:var(--soft);border-radius:1px}
-.cruz::before{left:10px;top:0;width:2px;height:30px}
-.cruz::after{left:3px;top:8px;width:16px;height:2px}
-.arco{position:relative;width:100%;aspect-ratio:3/4.4;max-height:72vh;border-radius:50% 50% 4px 4px/34% 34% 4px 4px;
-  border:10px solid var(--lift);overflow:hidden;perspective:1100px;box-shadow:0 30px 60px -30px rgba(0,0,0,.6);
-  background:radial-gradient(circle at 50% 55%,var(--luz),color-mix(in srgb,var(--luz) 40%,var(--bg)) 55%,var(--bg))}
-.folha{position:absolute;top:0;bottom:0;width:50%;padding:14% 9% 9%;display:flex;flex-direction:column;gap:7%;
-  background:repeating-linear-gradient(90deg,transparent 0 26px,color-mix(in srgb,var(--madeira-veio) 90%,transparent) 26px 27px),
-    repeating-linear-gradient(88deg,transparent 0 3px,color-mix(in srgb,var(--madeira-veio) 35%,transparent) 3px 4px),
-    linear-gradient(180deg,var(--madeira),var(--madeira-veio));
-  transition:transform 2.4s cubic-bezier(.45,0,.2,1);backface-visibility:hidden}
-.folha.esq{left:0;transform-origin:left center;border-right:1px solid var(--madeira-sombra)}
-.folha.dir{right:0;transform-origin:right center;border-left:1px solid var(--madeira-sombra)}
-.painel{border:1px solid var(--madeira-sombra);border-radius:3px;flex:1;
-  box-shadow:inset 2px 2px 0 var(--madeira-luz),inset -2px -2px 0 var(--madeira-sombra),0 1px 0 var(--madeira-luz);
-  background:linear-gradient(180deg,color-mix(in srgb,var(--madeira-luz) 45%,transparent),transparent)}
-.painel.alto{flex:2.2;border-radius:50% 50% 3px 3px/22% 22% 3px 3px}
-.argola{position:absolute;top:56%;width:20px;height:20px;border-radius:50%;border:2px solid var(--ferro)}
-.folha.esq .argola{right:10px}
-.folha.dir .argola{left:10px}
-.argola::before{content:'';position:absolute;left:50%;top:-8px;width:8px;height:8px;transform:translateX(-50%);border-radius:50%;background:var(--ferro)}
-.porta.aberta .folha.esq{transform:rotateY(-104deg)}
-.porta.aberta .folha.dir{transform:rotateY(104deg)}
-.degrau{width:112%;height:10px;border-radius:3px;background:linear-gradient(var(--lift),var(--deep))}
-.legenda{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--soft);text-align:center}
+  transition:opacity .5s ease,visibility .5s}
+.uniao.visivel{visibility:visible;opacity:1}
+.uniao.entrar{opacity:0;transition:opacity .8s ease}
+.uniao .cena{display:flex;flex-direction:column;align-items:center;gap:22px;width:min(80vw,360px)}
+.quadro{position:relative;width:100%;aspect-ratio:4/5;max-height:68vh}
+.metade{position:absolute;inset:0;border-radius:18px;overflow:hidden;background:var(--deep);
+  filter:grayscale(.85) sepia(.25) brightness(.8);
+  transition:transform 3.6s cubic-bezier(.16,.84,.3,1),filter 1.6s ease,opacity 1s ease}
+.metade img,.inteira img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* Depois de unidas, a fotografia inteira cobre o rasgo: não fica cicatriz. */
+.inteira{position:absolute;inset:0;border-radius:18px;overflow:hidden;opacity:0;box-shadow:0 0 0 4px var(--frame),0 30px 60px -30px rgba(0,0,0,.7);transition:opacity 1.4s ease .25s}
+.uniao.restaurada .inteira{opacity:1}
+.metade.esq{transform:translate(-38%,4%) rotate(-7deg)}
+.metade.dir{transform:translate(38%,-4%) rotate(6deg)}
+.uniao.unir .metade{transform:none}
+.uniao.restaurada .metade{filter:none}
+.luz{position:absolute;left:50%;top:-6%;bottom:-6%;width:3px;margin-left:-1.5px;border-radius:3px;opacity:0;pointer-events:none;
+  background:linear-gradient(transparent,#fff 20%,var(--detail) 50%,#fff 80%,transparent);box-shadow:0 0 24px 8px color-mix(in srgb,var(--detail) 70%,transparent)}
+.uniao.restaurada .luz{animation:sela 1.8s ease-out forwards}
+@keyframes sela{0%{opacity:0;transform:scaleY(.2)}25%{opacity:1;transform:scaleY(1)}100%{opacity:0;transform:scaleY(1) scaleX(14)}}
+.uniao .legenda{font-family:var(--serif);font-size:1.45rem;line-height:1.25;color:var(--text);text-align:center;text-wrap:balance;opacity:0;transform:translateY(10px);transition:opacity 1.2s ease .3s,transform 1.2s ease .3s}
+.uniao.restaurada .legenda{opacity:1;transform:none}
 
 @media (prefers-reduced-motion:reduce){
-  .folha,.porta,.nucleo,.botao-chave.aceite .ramo{transition:none}
-  .botao-chave.aceite .rosa,.botao-chave.aceite .folhinha{animation:none;transform:none;opacity:1}
+  .nucleo,.metade,.uniao,.inteira{transition:none}
+  .botao-chave::after{animation:none}
 }

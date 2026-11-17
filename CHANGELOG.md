@@ -1,5 +1,10 @@
 # Registo de alterações
 
+## 2.11.0 (17/11/2026)
+
+- Save the Date: sem sino, sem rosas e sem portas da igreja. Ao aceitar, a "Fotografia da união" (nova no painel) surge partida em duas metades que se juntam em câmara lenta; uma luz sela o rasgo, a cor volta e abre-se o convite.
+- Paleta verde-sálvia escuro, champanhe e marfim; nomes e títulos em Cormorant Garamond.
+
 ## 2.10.0 (17/11/2026)
 
 - Estilo "Floresta" do convite completo: a mesma linguagem do Save the Date (fundo verde-floresta, letra Jost fina, botões e linhas caramelo, fotografias com moldura creme). As cores vêm de "Cores do Save the Date". Escolha em Aparência → Estilo do convite; "Clássico" mantém o desenho anterior.

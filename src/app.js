@@ -160,7 +160,7 @@ async function renderInvite(request, env, db, token) {
 }
 
 // Save the Date: recebe só o necessário, sem programa, presentes nem outros dados do convidado.
-const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'wedding_time', 'event_tz', 'thanks_after_event', 'envelope_seal_text', 'std_photo', 'std_photo_2', 'std_photo_3', 'std_video', 'std_bell', 'cover_image', 'std_title', 'std_kind', 'std_place', 'std_question', 'std_lock_text', 'std_button', 'std_tap_hint', 'std_door_caption', 'color_std_bg', 'color_std_text', 'color_std_soft', 'color_std_button', 'color_std_detail', 'color_std_frame'];
+const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'wedding_time', 'event_tz', 'thanks_after_event', 'envelope_seal_text', 'std_photo', 'std_photo_2', 'std_photo_3', 'std_video', 'std_bell', 'std_union_photo', 'cover_image', 'std_title', 'std_kind', 'std_place', 'std_question', 'std_lock_text', 'std_button', 'std_tap_hint', 'std_door_caption', 'color_std_bg', 'color_std_text', 'color_std_soft', 'color_std_button', 'color_std_detail', 'color_std_frame'];
 
 async function renderSaveDate(request, env, db, token) {
   const s = { ...DEFAULT_SETTINGS, ...(await getSettings(db)) };
@@ -417,7 +417,7 @@ async function putChunk(request, db, id, idx) {
 // ---------- Administração: validação ----------
 
 const URL_SETTINGS = new Set(['footer_instagram']);
-const MEDIA_SETTINGS = new Set(['std_photo', 'std_photo_2', 'std_photo_3', 'std_video', 'std_bell', 'groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
+const MEDIA_SETTINGS = new Set(['std_photo', 'std_photo_2', 'std_photo_3', 'std_video', 'std_bell', 'std_union_photo', 'groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
 
 function cleanSetting(key, raw) {
   const value = str(raw, key === 'relation_templates' ? 40000 : 6000);
