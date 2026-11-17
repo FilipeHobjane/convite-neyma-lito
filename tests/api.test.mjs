@@ -57,9 +57,9 @@ test('página inicial: metadados, dados e cabeçalhos de segurança', async () =
   const r = await call('/');
   assert.equal(r.status, 200);
   const html = await r.text();
-  assert.match(html, /<meta property="og:title" content="Convite de Casamento \| Nelde &amp; Nilton">/);
+  assert.match(html, /<meta property="og:title" content="Convite de Casamento \| Noiva &amp; Noivo">/);
   assert.match(html, /og:image" content="http:\/\/127\.0\.0\.1:\d+\/icons\/og\.jpg"/);
-  assert.equal(boot(html).s.couple_display, 'Nelde & Nilton');
+  assert.equal(boot(html).s.couple_display, 'Noiva & Noivo');
   assert.match(r.headers.get('content-security-policy'), /script-src 'self'/);
   assert.equal(r.headers.get('x-frame-options'), 'DENY');
 });
