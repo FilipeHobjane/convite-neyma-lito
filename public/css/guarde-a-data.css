@@ -1,3 +1,4 @@
+@font-face{font-family:'Cormorant Garamond';src:url(/fonts/cormorant.woff2) format('woff2');font-weight:300 700;font-display:swap}
 @font-face{font-family:'Jost';src:url(/fonts/jost.woff2) format('woff2');font-weight:100 900;font-display:swap}
 
 /* Save the Date "porta": as cores vêm do painel (color_std_*), aplicadas por el.style.setProperty. */
@@ -5,7 +6,7 @@
   --bg:#123f31;--text:#f6efe6;--soft:#d9c7b6;--button:#b07a55;--on-button:#1a0f09;--detail:#d29a6f;--frame:#d9c7b6;
   --deep:color-mix(in srgb,var(--bg) 72%,#000);--lift:color-mix(in srgb,var(--bg) 88%,#fff);--line:color-mix(in srgb,var(--soft) 45%,transparent);
   --madeira:#6b4130;--madeira-veio:#57331f;--madeira-sombra:#2e1a10;--madeira-luz:#8a5c45;--ferro:#0f6b4f;--luz:#eaf4ef;
-  --font:'Jost',system-ui,sans-serif;--ease:cubic-bezier(.22,.8,.26,1);
+  --font:'Jost',system-ui,sans-serif;--serif:'Cormorant Garamond',Georgia,serif;--ease:cubic-bezier(.22,.8,.26,1);
   color-scheme:dark;
 }
 *{box-sizing:border-box;margin:0}
@@ -25,8 +26,8 @@ button{font:inherit;color:inherit}
 .para{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--detail)}
 .saudacao{font-size:.95rem;color:var(--soft);overflow-wrap:anywhere}
 .saudacao strong{color:var(--text);font-weight:500}
-.nomes{font-weight:200;font-size:clamp(2.75rem,14vw,3.75rem);line-height:1;letter-spacing:-.01em;display:flex;flex-direction:column;align-items:center;gap:4px;overflow-wrap:anywhere}
-.nomes .e{font-size:.8rem;font-weight:400;letter-spacing:.3em;color:var(--detail)}
+.nomes{font-family:var(--serif);font-weight:400;font-size:clamp(3.1rem,15vw,4.2rem);line-height:1;letter-spacing:0;display:flex;flex-direction:column;align-items:center;gap:4px;overflow-wrap:anywhere}
+.nomes .e{font-family:var(--font);font-size:.8rem;font-weight:400;letter-spacing:.3em;color:var(--detail)}
 .data{font-weight:300;font-size:1.4rem;letter-spacing:.14em;display:flex;gap:10px;align-items:center;font-variant-numeric:tabular-nums}
 .data i{width:5px;height:5px;border-radius:50%;background:var(--detail);display:inline-block}
 .data-ext{font-size:.85rem;color:var(--soft)}
@@ -43,7 +44,7 @@ button{font:inherit;color:inherit}
 .video video{display:block;width:100%;max-height:70vh;background:var(--deep)}
 
 .pedido{display:flex;flex-direction:column;gap:8px;align-items:center}
-.pedido h2{font-weight:300;font-size:1.5rem;line-height:1.25;text-wrap:balance}
+.pedido h2{font-family:var(--serif);font-weight:400;font-size:1.85rem;line-height:1.2;text-wrap:balance}
 .pedido p{color:var(--soft);max-width:32ch}
 
 .chave{display:flex;flex-direction:column;align-items:center;gap:12px}

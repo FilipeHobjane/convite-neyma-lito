@@ -76,7 +76,7 @@
   if (s.invite_style !== 'classico') {
     document.documentElement.classList.add('floresta');
     const letters = s.color_invite_text || s.color_std_text;
-    const std = { '--bg': s.color_std_bg, '--text': letters, '--titles': letters, '--secondary': s.color_std_soft, '--buttons': s.color_std_button, '--gold': s.color_std_detail, '--frame': s.color_std_frame, '--font-titles': "'Jost', system-ui, sans-serif", '--font-text': "'Jost', system-ui, sans-serif" };
+    const std = { '--bg': s.color_std_bg, '--text': letters, '--titles': letters, '--secondary': s.color_std_soft, '--buttons': s.color_std_button, '--gold': s.color_std_detail, '--frame': s.color_std_frame, '--font-titles': "'Cormorant Garamond', Georgia, serif", '--font-text': "'Jost', system-ui, sans-serif" };
     for (const [k, v] of Object.entries(std)) if (v) root.setProperty(k, v);
     const hex = (s.color_std_button || '#b07a55').replace('#', '');
     const lum = ['0', '2', '4'].map((i) => parseInt(hex.substr(+i, 2), 16) / 255).reduce((a, c, i) => a + c * [0.2126, 0.7152, 0.0722][i], 0);
