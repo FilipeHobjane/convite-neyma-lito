@@ -158,11 +158,15 @@
     };
     const box = h('div', { class: 'cover' },
       h('button', { class: 'skip', type: 'button', onclick: () => { startMusic(); finish(); } }, 'Saltar abertura'),
-      guest ? h('div', null, h('div', { class: 'cover-to' }, guest.cover_line || 'Para'), h('div', { class: 'cover-guest' }, guest.name)) : null,
-      envBtn,
-      h('div', null, h('div', { class: 'cover-names' }, s.couple_display), h('div', { class: 'cover-date' }, longDate(s.wedding_date))),
-      h('div', { class: 'cover-hint' }, s.cover_hint),
+      // Painel de vidro fosco à volta do envelope, sobre a fotografia do casal desfocada.
+      h('div', { class: 'vidro' },
+        guest ? h('div', null, h('div', { class: 'cover-to' }, guest.cover_line || 'Para'), h('div', { class: 'cover-guest' }, guest.name)) : null,
+        envBtn,
+        h('div', null, h('div', { class: 'cover-names' }, s.couple_display), h('div', { class: 'cover-date' }, longDate(s.wedding_date))),
+        h('div', { class: 'cover-hint' }, s.cover_hint)),
       shown('letter') ? letter : null);
+    const backdrop = [s.std_union_photo, s.cover_image, s.std_photo].find((id) => /^[a-f0-9]{32}$/.test(id || ''));
+    if (backdrop) { box.classList.add('com-foto'); box.style.setProperty('--cover-img', `url("/media/${backdrop}")`); }
     const open = () => {
       if (envBtn.classList.contains('broken')) return;
       envBtn.classList.add('broken');
