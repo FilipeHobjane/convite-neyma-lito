@@ -641,28 +641,9 @@
           status,
           h('p', { class: 'muted space' }, 'Recomendado: MP4, ao alto, 10 a 20 segundos, menos de 8 MB. Cada convidado descarrega o vídeo inteiro, por isso um ficheiro leve abre mais depressa e gasta menos dados.'));
       })(),
-      (() => {
-        const d = D.settings;
-        return h('div', { class: 'card' }, h('h2', null, 'Som do sino'),
-          h('p', { class: 'muted' }, 'Toca quando o convidado aceita reservar o dia e as portas da igreja se abrem. Sem gravação, toca um repique gerado no telemóvel. Recomendado: MP3 de 5 a 8 segundos, menos de 1 MB.'),
-          d.std_bell ? h('audio', { class: 'space', controls: true, preload: 'none', src: media(d.std_bell) }) : h('p', { class: 'space' }, 'Nenhuma gravação carregada.'),
-          h('div', { class: 'row space' },
-            h('label', { class: 'btn alt file' }, d.std_bell ? 'Substituir som' : 'Carregar som', h('input', {
-              type: 'file', accept: 'audio/mpeg,audio/ogg,audio/wav,audio/mp4,.mp3,.m4a,.ogg,.wav',
-              onchange: async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                if (file.size > 5e6) { toast('O som tem mais de 5 MB. Use um ficheiro curto, de poucos segundos.', true); return; }
-                toast('A carregar som…');
-                act(async () => {
-                  const type = file.type === 'audio/mp3' ? 'audio/mpeg' : file.type === 'audio/x-m4a' ? 'audio/mp4' : file.type;
-                  const id = await uploadBlob(file, type, file.name);
-                  await api('settings', 'PUT', { std_bell: id });
-                }, 'Som do sino carregado.');
-              },
-            })),
-            d.std_bell ? h('button', { class: 'btn bad', type: 'button', onclick: () => { if (confirm('Retirar a gravação do sino? Volta o repique gerado no telemóvel.')) act(() => api('settings', 'PUT', { std_bell: '' }), 'Som retirado.'); } }, 'Retirar som') : null));
-      })(),
+      h('div', { class: 'card' }, h('h2', null, 'Fotografia da união'),
+        h('p', { class: 'muted' }, 'Quando o convidado toca em "Aceito reservar este dia", esta fotografia aparece partida em duas metades que se juntam devagar numa só, e só depois abre o convite. Use uma fotografia do casal junto, ao alto. Sem ela, usa a Fotografia 1.'),
+        h('div', { class: 'space' }, imageSetting('Fotografia da união (ao alto)', 'std_union_photo'))),
       settingsForm('Textos', [
         { k: 'show_savedate', l: 'Save the Date activo (desligado, os links abrem o convite)', t: 'check' },
         { k: 'std_gate', l: 'O convite só abre depois de tocar em "Aceito reservar este dia"', t: 'check' },
@@ -672,7 +653,7 @@
         { k: 'std_lock_text', l: 'Explicação por baixo da pergunta', t: 'area', rows: 2 },
         { k: 'std_button', l: 'Texto do botão', ph: 'Aceito reservar este dia', help: 'Curto: cabe dentro do botão redondo.' },
         { k: 'std_tap_hint', l: 'Instrução por baixo do botão', ph: 'Toque para abrir o convite' },
-        { k: 'std_door_caption', l: 'Frase nas portas da igreja', help: '{casal} é substituído pelos nomes do casal.' },
+        { k: 'std_door_caption', l: 'Frase quando a fotografia se une', ph: 'Duas metades, uma só história', help: '{casal} é substituído pelos nomes do casal.' },
         { k: 'std_share_message', l: 'Mensagem no WhatsApp para quem não tem modelo próprio', t: 'area', rows: 2 },
       ]),
       settingsForm('Cores do Save the Date', [

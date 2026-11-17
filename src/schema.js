@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '10';
+export const SCHEMA_VERSION = '11';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -200,6 +200,8 @@ export const DEFAULT_SETTINGS = {
   std_photo_3: '',
   std_video: '',
   std_bell: '',
+  // Fotografia que surge partida ao meio e se une quando o convidado aceita reservar o dia.
+  std_union_photo: '',
   // O convite só abre depois de o convidado tocar em "Aceito reservar este dia".
   std_gate: '1',
   std_kind: 'Bênção matrimonial',
@@ -208,7 +210,7 @@ export const DEFAULT_SETTINGS = {
   std_lock_text: 'O convite completo só se abre quando aceitar guardar a data.',
   std_button: 'Aceito reservar este dia',
   std_tap_hint: 'Toque para abrir o convite',
-  std_door_caption: 'A bênção de {casal} espera por si',
+  std_door_caption: 'Duas metades, uma só história',
   // Cores do Save the Date e do convite Floresta: verde-sálvia escuro, champanhe e marfim.
   color_std_bg: '#0b2b21',
   color_std_text: '#f5e3ce',
@@ -291,6 +293,7 @@ export async function ensureSchema(db) {
     else {
       if (Number(current) < 8) await replaceOldExamples(db);
       if (Number(current) < 10) await replaceOld(db, OLD_PALETTE);
+      if (Number(current) < 11) await replaceOld(db, { std_door_caption: 'A bênção de {casal} espera por si' });
     }
     await db.prepare(`INSERT OR REPLACE INTO settings(key,value) VALUES('schema_version',?)`).bind(SCHEMA_VERSION).run();
   }
