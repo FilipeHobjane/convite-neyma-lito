@@ -365,3 +365,4 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
 .floresta .foot .btn.ghost:hover{background:var(--buttons);color:var(--on-button)}
 .floresta .toast{background:var(--text);color:var(--bg)}
 .floresta .swatches i{box-shadow:0 0 0 1px var(--line)}
+.floresta .prog time{color:var(--text)}

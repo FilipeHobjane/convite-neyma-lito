@@ -219,6 +219,8 @@ export const DEFAULT_SETTINGS = {
   std_title: 'Save the Date',
   // 'floresta': o convite usa as cores e a letra do Save the Date. 'classico': fundo claro e letra clássica.
   invite_style: 'floresta',
+  // Letras do convite no estilo Floresta: o creme quente das horas do programa.
+  color_invite_text: '#dcb491',
   relation_templates: JSON.stringify(DEFAULT_TEMPLATES),
   std_hint: 'Raspe o dourado com o dedo para descobrir',
   std_message: 'Vamos casar, e este dia só fica completo consigo.',
