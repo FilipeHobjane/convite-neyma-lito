@@ -43,7 +43,7 @@ Atenção: um link pessoal permite ver e alterar a resposta desse convidado. Nã
 | Data e confirmações | Data, prazo, regras e agradecimentos |
 | Textos | Citação, convite formal, mensagem de partilha, rodapé |
 | Carta e história | Textos da carta de abertura, pétalas e passe, e capítulos com foto |
-| Save the Date | Foto ou vídeo (MP4, idealmente menos de 8 MB), textos e mensagem. Envie em **Enviar pelo WhatsApp**, ou partilhe o link geral `/guarde-a-data`. Usa o mesmo código pessoal do convite, por isso quem o recebe também pode chegar ao convite se souber o endereço |
+| Save the Date | Até três fotografias, vídeo (MP4, idealmente menos de 8 MB), som do sino (MP3 curto), textos e cores. O convidado toca em "Aceito reservar este dia" e as portas da igreja abrem o convite; com a porta activa, o convite não abre sem esse toque. A hora da aceitação aparece na lista de convidados. Envie em **Enviar pelo WhatsApp**, ou partilhe o link geral `/guarde-a-data`. Usa o mesmo código pessoal do convite, por isso quem o recebe também pode chegar ao convite se souber o endereço |
 | Programa e locais | Momentos do dia; os locais alimentam a secção Localização |
 | Dress code, Galeria, Música, Presentes, Lojas, Informações | Conteúdos respectivos |
 | Secções e títulos | Mostrar, esconder e renomear cada parte do convite |

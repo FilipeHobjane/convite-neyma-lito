@@ -1,11 +1,13 @@
-// Save the Date. A data fica escondida por uma folha dourada que o convidado raspa.
-// Todo o texto entra por textContent, nunca como HTML.
+// Save the Date "porta": fotografias, vídeo e o botão "Aceito reservar este dia".
+// Só esse botão abre o convite: regista a aceitação, faz florir a grinalda de rosas,
+// toca o sino e abre as portas da igreja. Todo o texto entra por textContent, nunca como HTML.
 (() => {
   const bootEl = document.getElementById('boot');
   if (!bootEl) { location.replace('/guarde-a-data'); return; }
   const { s, guest } = JSON.parse(bootEl.textContent);
   const app = document.getElementById('app');
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const NS = 'http://www.w3.org/2000/svg';
 
   function h(tag, props, ...kids) {
     const el = document.createElement(tag);
@@ -19,268 +21,195 @@
     for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) el.append(kid);
     return el;
   }
+  function svg(tag, attrs, parent) {
+    const el = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+    if (parent) parent.append(el);
+    return el;
+  }
 
+  // ---------- Cores do painel ----------
   const root = document.documentElement.style;
-  const theme = { '--primary': s.color_primary, '--gold': s.color_gold, '--font-titles': s.font_titles, '--font-text': s.font_text };
-  for (const [k, v] of Object.entries(theme)) if (v) root.setProperty(k, v);
+  const colours = { '--bg': s.color_std_bg, '--text': s.color_std_text, '--soft': s.color_std_soft, '--button': s.color_std_button, '--detail': s.color_std_detail, '--frame': s.color_std_frame };
+  for (const [k, v] of Object.entries(colours)) if (/^#[0-9a-f]{6}$/i.test(v || '')) root.setProperty(k, v);
+  // Texto do botão escuro ou claro, conforme a cor do botão.
+  const lum = (hex) => { const n = parseInt(String(hex || '#000000').slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+  root.setProperty('--on-button', lum(s.color_std_button) > 0.55 ? '#1a0f09' : '#fbf6ef');
+  const theme = document.querySelector('meta[name="theme-color"]');
+  if (theme && s.color_std_bg) theme.setAttribute('content', s.color_std_bg);
 
-  const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  // ---------- Dados ----------
   const WEEK = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
   const [y, m, d] = (s.wedding_date || '').split('-').map(Number);
   const weekday = d ? WEEK[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] : '';
-  // A mesma hora do convite, para as duas contagens coincidirem.
-  const target = Date.parse(`${s.wedding_date}T${s.wedding_time || '00:00'}:00${s.event_tz || '+02:00'}`);
-  const past = Date.now() > target + 864e5;
-  // O código do link pessoal é o mesmo do convite.
-  const token = (/^\/guarde-a-data\/([\w-]{8,40})/.exec(location.pathname) || [])[1];
+  const pad = (n) => String(n).padStart(2, '0');
+  const token = (/^\/guarde-a-data\/([\w-]{8,40})/.exec(location.pathname) || [])[1] || '';
   const firstName = (n) => (n || '').trim().split(/\s+/)[0] || '';
-
-  function downloadIcs() {
-    const pad = (n) => String(n).padStart(2, '0');
-    const next = new Date(Date.UTC(y, m - 1, d + 1));
-    const now = new Date();
-    const esc = (v) => String(v || '').replace(/([,;\\])/g, '\\$1');
-    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Convite//PT', 'BEGIN:VEVENT', `UID:save-the-date-${s.wedding_date}@convite`,
-      `DTSTAMP:${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T000000Z`,
-      `DTSTART;VALUE=DATE:${y}${pad(m)}${pad(d)}`,
-      `DTEND;VALUE=DATE:${next.getUTCFullYear()}${pad(next.getUTCMonth() + 1)}${pad(next.getUTCDate())}`,
-      `SUMMARY:${esc(`Casamento de ${s.couple_display}`)}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-    const a = h('a', { href: URL.createObjectURL(new Blob([ics], { type: 'text/calendar' })), download: 'guarde-a-data.ics' });
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  }
+  const fill = (t) => String(t || '').replace(/\{casal\}/g, () => s.couple_display || '');
 
   // ---------- Página ----------
-  const photoId = s.std_photo || s.cover_image;
-  const foil = h('canvas', { class: 'foil', role: 'img', 'aria-label': 'Folha dourada que esconde a data' });
-  // Com vídeo, a foto fica por cima até o vídeo ter imagem: nunca aparece o arco vazio.
-  // O vídeo só tem endereço quando é preciso: assim é descarregado uma única vez.
-  const videoUrl = s.std_video ? `/media/${s.std_video}` : '';
-  const video = s.std_video ? h('video', {
-    class: 'photo', muted: true, loop: true, playsInline: true, preload: 'auto', 'aria-label': `Vídeo de ${s.couple_display}`,
-  }) : null;
-  const cover = video && photoId ? h('img', { class: 'photo cover', src: `/media/${photoId}`, alt: '', fetchpriority: 'high' }) : null;
-  if (video) {
+  const photos = [s.std_photo || s.cover_image, s.std_photo_2, s.std_photo_3].filter((id) => /^[a-f0-9]{32}$/.test(id || ''));
+  const gallery = photos.length ? h('section', { class: `galeria n${photos.length}`, 'aria-label': `Fotografias de ${s.couple_display}` },
+    photos.map((id, i) => h('div', { class: 'foto' }, h('img', { src: `/media/${id}`, alt: i ? '' : `Fotografia de ${s.couple_display}`, loading: i ? 'lazy' : 'eager', decoding: 'async' })))) : null;
+  let video = null;
+  if (/^[a-f0-9]{32}$/.test(s.std_video || '')) {
+    video = h('video', { controls: true, playsInline: true, preload: 'metadata', src: `/media/${s.std_video}`, 'aria-label': `Vídeo de ${s.couple_display}` });
     video.setAttribute('playsinline', '');
-    video.setAttribute('muted', '');
-    if (cover) video.addEventListener('timeupdate', () => { if (!video.paused && video.currentTime > 0.05) cover.classList.add('off'); });
+    if (photos[0]) video.poster = `/media/${photos[0]}`;
   }
-  // O iPhone só deixa um vídeo tocar com som depois de um toque simples; raspar é arrastar e não conta.
-  // O toque no selo de entrada inicia o vídeo com som e pára-o logo: a partir daí o iPhone aceita o som
-  // sem novo toque. O vídeo fica a correr sem som por baixo do dourado, já carregado para a revelação.
-  function unlockVideo() {
-    if (!video) return;
-    if (!video.getAttribute('src')) video.src = videoUrl;
-    video.muted = false;
-    video.play().catch(() => {});
-    video.pause();
-    video.muted = true;
-    video.play().catch(() => {});
-  }
-  let pendingVideo = false;
-  function startVideo() {
-    if (!pendingVideo) return;
-    if (!video.getAttribute('src')) video.src = videoUrl;
-    video.muted = false;
-    video.play().then(() => { pendingVideo = false; }).catch(() => {
-      video.muted = true;
-      video.play().catch(() => {});
+
+  const greeting = guest ? h('p', { class: 'saudacao' }, guest.salutation ? guest.salutation : h('span', null, 'Para ', h('strong', null, guest.name))) : null;
+
+  const coroa = svg('svg', { viewBox: '0 0 164 164', 'aria-hidden': 'true' });
+  const button = h('button', { class: 'botao-chave', type: 'button', 'aria-describedby': 'dica' }, coroa, h('span', { class: 'nucleo' }, s.std_button));
+  const hint = h('p', { class: 'dica', id: 'dica' }, s.std_tap_hint);
+  const error = h('p', { class: 'erro', role: 'alert', hidden: true });
+
+  app.append(h('div', { class: 'aura', 'aria-hidden': 'true' }), h('main', { class: 'palco' },
+    h('header', { class: 'topo' },
+      guest && guest.cover_line ? h('p', { class: 'para' }, guest.cover_line) : null,
+      greeting,
+      h('p', { class: 'rotulo' }, [s.std_title, s.std_kind].filter(Boolean).join(' · ')),
+      h('h1', { class: 'nomes' }, firstName(s.bride_name), h('span', { class: 'e' }, 'E'), firstName(s.groom_name)),
+      d ? h('p', { class: 'data', 'aria-label': `${d}/${m}/${y}` }, h('span', null, pad(d)), h('i'), h('span', null, pad(m)), h('i'), h('span', null, String(y))) : null,
+      h('p', { class: 'data-ext' }, [weekday, s.std_place].filter(Boolean).join(' · '))),
+    gallery,
+    video ? h('section', { class: 'video' }, video) : null,
+    h('section', { class: 'pedido' }, h('h2', null, s.std_question), s.std_lock_text ? h('p', null, s.std_lock_text) : null),
+    h('div', { class: 'chave' }, button, hint, error)));
+
+  // ---------- Grinalda: um ramo corre à volta do botão e as rosas abrem-se à sua passagem ----------
+  (() => {
+    const N = 14; const R = 70; const C = 82; const RUN = 1.3;
+    const defs = svg('defs', {}, coroa);
+    // v: esmeralda, r: chocolate
+    [['v', '#7fe0b5', '#0f6b4f', '#063d2c'], ['r', '#b98366', '#5a3523', '#2a170d']].forEach(([id, light, mid, dark]) => {
+      const g = svg('radialGradient', { id: `pet-${id}`, cx: '40%', cy: '35%', r: '75%' }, defs);
+      svg('stop', { offset: '0%', 'stop-color': light }, g);
+      svg('stop', { offset: '60%', 'stop-color': mid }, g);
+      svg('stop', { offset: '100%', 'stop-color': dark }, g);
+      const sym = svg('symbol', { id: `rosa-${id}`, viewBox: '-12 -12 24 24', overflow: 'visible' }, defs);
+      for (let k = 0; k < 5; k++) svg('ellipse', { cx: 0, cy: -5.2, rx: 5.4, ry: 6.2, fill: `url(#pet-${id})`, stroke: dark, 'stroke-width': 0.35, 'stroke-opacity': 0.5, transform: `rotate(${k * 72})` }, sym);
+      for (let k = 0; k < 3; k++) svg('ellipse', { cx: 0, cy: -2.6, rx: 3.6, ry: 4, fill: `url(#pet-${id})`, stroke: dark, 'stroke-width': 0.35, 'stroke-opacity': 0.6, transform: `rotate(${k * 120 + 40})` }, sym);
+      svg('path', { d: 'M0,0 m-.8,0 a.8,.8 0 1 1 1.6,0 a1.7,1.7 0 1 1 -3.4,0 a2.6,2.6 0 1 1 5.2,.3', fill: 'none', stroke: dark, 'stroke-width': 0.7, 'stroke-linecap': 'round' }, sym);
     });
-  }
-  // Se mesmo assim o telemóvel recusar, qualquer toque seguinte, em qualquer parte do ecrã, volta a tentar.
-  if (video) ['touchend', 'pointerup', 'click'].forEach((n) => addEventListener(n, startVideo, { passive: true }));
-  // Ao voltar à página (outra app, ecrã bloqueado), o telemóvel pode ter parado o vídeo: retoma-o.
-  const resume = () => {
-    if (!video || !finished || !video.paused || document.visibilityState !== 'visible') return;
-    pendingVideo = true;
-    startVideo();
-  };
-  document.addEventListener('visibilitychange', resume);
-  addEventListener('pageshow', resume);
-  const ticket = h('div', { class: 'ticket' },
-    video || (photoId ? h('img', { class: 'photo', src: `/media/${photoId}`, alt: `Fotografia de ${s.couple_display}`, fetchpriority: 'high' }) : null),
-    cover,
-    h('div', { class: 'date' }, h('small', null, weekday), h('b', null, d), h('em', null, `${MONTHS[m - 1]} de ${y}`)),
-    foil);
-  const dias = h('b', null, '0');
-  const horas = h('b', null, '00');
-  const mins = h('b', null, '00');
-  const count = h('div', { class: 'count', role: 'timer' },
-    h('div', null, dias, h('small', null, 'Dias')), h('div', null, horas, h('small', null, 'Horas')), h('div', null, mins, h('small', null, 'Min')));
-  // Depois do casamento, a página agradece em vez de convidar.
-  const after = h('div', { class: 'after', hidden: true, 'aria-live': 'polite' },
-    h('p', { class: 'line' }, past ? s.thanks_after_event : s.std_message), past ? null : count,
-    past ? null : h('button', { class: 'btn', type: 'button', onclick: downloadIcs }, 'Guardar na agenda'),
-    s.show_std_invite === '1' ? h('a', { class: 'btn ghost', href: token ? `/c/${token}` : '/' }, past ? 'Ver o convite' : 'Abrir o convite') : null,
-    !past && s.std_next && s.show_std_invite !== '1' ? h('p', { class: 'next' }, s.std_next) : null);
-  const before = h('p', { class: 'hint' }, s.std_hint);
-  const names = [firstName(s.bride_name), firstName(s.groom_name)];
-  const heading = () => h('div', null,
-    h('h1', { class: 'title' }, s.std_title),
-    h('div', { class: 'title-rule' }, h('i')),
-    guest && guest.cover_line ? h('p', { class: 'line-to' }, guest.cover_line) : null,
-    guest ? h('p', { class: 'to' }, guest.cover_line ? guest.name : `Para ${guest.name}`) : null);
-  app.append(h('main', { class: 'arch' },
-    heading(),
-    h('p', { class: 'names' }, names[0], h('i', null, '&'), names[1]),
-    ticket, before, after));
-  // Selo de entrada: só existe com vídeo, porque é ele que permite a música começar sozinha.
-  if (video) {
-    const gate = h('div', { class: 'gate' },
-      heading(),
-      h('button', {
-        class: 'gate-seal', type: 'button', 'aria-label': 'Abrir o Save the Date',
-        onclick: () => {
-          unlockVideo();
-          gate.classList.add('gone');
-          setTimeout(() => gate.remove(), 700);
-        },
-      }, s.envelope_seal_text),
-      h('p', { class: 'hint' }, 'Toque no selo para abrir'));
-    document.body.append(gate);
-  }
-
-  // ---------- Folha dourada ----------
-  const ctx = foil.getContext('2d', { willReadFrequently: true });
-  let finished = false;
-  let drawing = false;
-  let last = null;
-  let strokes = 0;
-
-  function paintFoil() {
-    const box = foil.getBoundingClientRect();
-    const { width: w, height: fh } = box;
-    const ratio = Math.min(devicePixelRatio || 1, 2);
-    foil.width = Math.round(w * ratio);
-    foil.height = Math.round(fh * ratio);
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    const g = ctx.createLinearGradient(0, 0, w, fh);
-    [[0, '#8f6d33'], [0.28, '#e9d29c'], [0.5, '#b98f4b'], [0.72, '#f0dcae'], [1, '#94723a']].forEach(([at, c]) => g.addColorStop(at, c));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, fh);
-    // Grão fixo: a folha parece metal e não uma cor lisa.
-    for (let i = 0; i < 900; i++) {
-      ctx.fillStyle = i % 2 ? 'rgba(255,245,215,.16)' : 'rgba(80,50,15,.13)';
-      ctx.fillRect(((i * 7919) % 1000) / 1000 * w, ((i * 104729) % 1000) / 1000 * fh, 1.4, 1.4);
+    svg('circle', { class: 'trilho-anel', cx: C, cy: C, r: R }, coroa);
+    let path = '';
+    for (let i = 0; i <= 240; i++) {
+      const a = (i / 240) * Math.PI * 2 - Math.PI / 2;
+      const rr = R + Math.sin((i / 240) * Math.PI * 2 * N) * 3.2;
+      path += `${i ? 'L' : 'M'}${(C + rr * Math.cos(a)).toFixed(2)},${(C + rr * Math.sin(a)).toFixed(2)}`;
     }
-    ctx.fillStyle = s.color_primary;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `italic 500 34px ${s.font_titles}`;
-    ctx.fillText(s.envelope_seal_text, w / 2, fh / 2 - 12);
-    ctx.font = `500 11px ${s.font_text}`;
-    ctx.fillText('R A S P E   A Q U I', w / 2, fh / 2 + 22);
-  }
-
-  const point = (e) => { const b = foil.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
-  function check() {
-    const { data } = ctx.getImageData(0, 0, foil.width, foil.height);
-    let clear = 0;
-    let total = 0;
-    for (let i = 3; i < data.length; i += 96) { total++; if (data[i] < 40) clear++; }
-    if (total && clear / total > 0.46) finish();
-  }
-  function scratch(from, to) {
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 42;
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.stroke();
-    ctx.globalCompositeOperation = 'source-over';
-    strokes++;
-  }
-  foil.addEventListener('pointerdown', (e) => {
-    if (finished) return;
-    drawing = true;
-    last = point(e);
-    try { foil.setPointerCapture(e.pointerId); } catch { /* opcional */ }
-    scratch(last, { x: last.x + 0.1, y: last.y + 0.1 });
-  });
-  foil.addEventListener('pointermove', (e) => {
-    if (!drawing || finished) return;
-    const p = point(e);
-    scratch(last, p);
-    last = p;
-  });
-  // Ao levantar o dedo: no toque, o iPhone só aceita iniciar o vídeo no touchend; com o rato, no pointerup.
-  const lift = () => { drawing = false; if (finished) return; check(); };
-  foil.addEventListener('touchend', lift);
-  foil.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') lift(); });
-  foil.addEventListener('pointercancel', () => { drawing = false; });
-
-  function tick() {
-    const left = target - Date.now();
-    if (!(left > 0)) { count.hidden = true; return; }
-    dias.textContent = Math.floor(left / 864e5);
-    horas.textContent = String(Math.floor((left % 864e5) / 36e5)).padStart(2, '0');
-    mins.textContent = String(Math.floor((left % 36e5) / 6e4)).padStart(2, '0');
-  }
-
-  function finish() {
-    if (finished) return;
-    finished = true;
-    drawing = false;
-    foil.classList.add('gone');
-    ticket.classList.add('done');
-    before.hidden = true;
-    after.hidden = false;
-    if (video) {
-      if (video.readyState > 0) video.currentTime = 0;
-      pendingVideo = true;
-      startVideo();
+    const vine = svg('path', { class: 'ramo', d: path }, coroa);
+    vine.style.setProperty('--comp', String(Math.ceil(vine.getTotalLength ? vine.getTotalLength() : 460)));
+    for (let i = 0; i < N; i++) {
+      const delay = (i / N) * RUN;
+      const fa = ((i + 0.5) / N) * Math.PI * 2 - Math.PI / 2;
+      const fx = C + (R + 5) * Math.cos(fa); const fy = C + (R + 5) * Math.sin(fa);
+      const wf = svg('g', { transform: `translate(${fx.toFixed(2)} ${fy.toFixed(2)}) rotate(${((fa * 180) / Math.PI + 60).toFixed(1)})` }, coroa);
+      svg('ellipse', { class: 'folhinha', cx: 0, cy: 0, rx: 4.6, ry: 1.9 }, wf).style.setProperty('animation-delay', `${(delay + 0.12).toFixed(2)}s`);
+      const a = (i / N) * Math.PI * 2 - Math.PI / 2;
+      const w = svg('g', { transform: `translate(${(C + R * Math.cos(a)).toFixed(2)} ${(C + R * Math.sin(a)).toFixed(2)})` }, coroa);
+      const rose = svg('g', { class: 'rosa' }, w);
+      svg('use', { href: `#rosa-${i % 2 ? 'r' : 'v'}`, x: -11, y: -11, width: 22, height: 22, transform: `rotate(${i * 53})` }, rose);
+      rose.style.setProperty('animation-delay', `${delay.toFixed(2)}s`);
     }
-    tick();
-    setInterval(tick, 30000);
-    try { if (navigator.vibrate) navigator.vibrate([20, 40, 70]); } catch { /* opcional */ }
-    petals();
-  }
+  })();
 
-  function petals() {
-    if (reduced()) return;
-    const canvas = h('canvas', { class: 'petals', 'aria-hidden': 'true' });
-    const c = canvas.getContext('2d');
-    if (!c) return;
-    document.body.append(canvas);
-    const w = innerWidth;
-    const hh = innerHeight;
-    const ratio = Math.min(devicePixelRatio || 1, 2);
-    canvas.width = w * ratio;
-    canvas.height = hh * ratio;
-    c.scale(ratio, ratio);
-    const colours = ['#e4c98f', s.color_gold, '#f3dcc0', '#b9545f', '#fff4dc'];
-    const list = Array.from({ length: 70 }, (_, i) => ({
-      x: Math.random() * w, y: -20 - Math.random() * hh, size: 4 + Math.random() * 6, speed: 1.3 + Math.random() * 1.8,
-      turn: Math.random() * 6.28, spin: (Math.random() - 0.5) * 0.1, sway: Math.random() * 6.28, colour: colours[i % colours.length],
-    }));
-    const begin = performance.now();
-    const frame = (now) => {
-      const fade = Math.max(0, Math.min(1, (5200 - (now - begin)) / 1000));
-      c.clearRect(0, 0, w, hh);
-      let alive = false;
-      list.forEach((p) => {
-        p.y += p.speed; p.turn += p.spin; p.sway += 0.03;
-        if (p.y < hh + 20) alive = true;
-        c.save();
-        c.globalAlpha = fade;
-        c.translate(p.x + Math.sin(p.sway) * 16, p.y);
-        c.rotate(p.turn);
-        c.fillStyle = p.colour;
-        c.beginPath();
-        c.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, 6.29);
-        c.fill();
-        c.restore();
+  // ---------- Porta da igreja ----------
+  const door = h('div', { class: 'porta', 'aria-hidden': 'true' },
+    h('div', { class: 'cena' },
+      h('div', { class: 'cruz' }),
+      h('div', { class: 'arco' },
+        h('div', { class: 'folha esq' }, h('div', { class: 'painel alto' }), h('div', { class: 'painel' }), h('span', { class: 'argola' })),
+        h('div', { class: 'folha dir' }, h('div', { class: 'painel alto' }), h('div', { class: 'painel' }), h('span', { class: 'argola' }))),
+      h('div', { class: 'degrau' }),
+      h('p', { class: 'legenda' }, fill(s.std_door_caption))));
+  document.body.append(door);
+
+  // ---------- Sino ----------
+  // Com uma gravação carregada no painel, toca-a (os telemóveis tocam <audio> mesmo em silêncio).
+  // Sem gravação, um repique de seis sinos gerado no próprio telemóvel.
+  let audioCtx = null;
+  function synthPeal() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audioCtx = audioCtx || new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const ctx = audioCtx;
+    const len = Math.floor(ctx.sampleRate * 3.8);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) { const data = buf.getChannelData(c); for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    const conv = ctx.createConvolver(); conv.buffer = buf;
+    const wet = ctx.createGain(); wet.gain.value = 0.55; conv.connect(wet).connect(ctx.destination);
+    const bell = (t, nominal, vol) => {
+      const prime = nominal / 2; const out = ctx.createGain(); out.gain.value = vol; out.connect(ctx.destination); out.connect(conv);
+      [[0.5, 0.35, 4.5], [1, 0.5, 3.2], [1.2, 0.45, 2.6], [1.5, 0.22, 2], [2, 0.6, 2.2], [2.5, 0.18, 1.3], [2.67, 0.2, 1.1], [3, 0.16, 0.9], [4.03, 0.1, 0.5]].forEach(([r, a, dur]) => {
+        [-0.35, 0.35].forEach((det) => {
+          const o = ctx.createOscillator(); const g = ctx.createGain();
+          o.frequency.value = prime * r + det;
+          g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(a * 0.06, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          o.connect(g).connect(out); o.start(t); o.stop(t + dur + 0.05);
+        });
       });
-      if (alive && fade > 0) requestAnimationFrame(frame);
-      else canvas.remove();
     };
-    requestAnimationFrame(frame);
+    const notes = [784, 698.5, 659.3, 587.3, 523.3, 440];
+    let t = ctx.currentTime + 0.05;
+    for (let round = 0; round < 3; round++) { notes.forEach((f) => { bell(t, f, 0.9 - round * 0.15); t += 0.34; }); t += round % 2 ? 0.34 : 0; }
+  }
+  function ringBell() {
+    try {
+      if (/^[a-f0-9]{32}$/.test(s.std_bell || '')) {
+        const a = new Audio(`/media/${s.std_bell}`);
+        a.play().catch(() => synthPeal());
+      } else synthPeal();
+    } catch { /* o som é opcional */ }
   }
 
-  paintFoil();
-  // A letra pode chegar depois do primeiro desenho; a folha só é redesenhada se ninguém a raspou.
-  const repaint = () => { if (!finished && !strokes) paintFoil(); };
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(repaint);
-  addEventListener('resize', repaint);
+  // ---------- Aceitar ----------
+  let busy = false;
+  async function accept() {
+    if (busy) return;
+    busy = true;
+    error.hidden = true;
+    if (video && !video.paused) video.pause();
+    button.classList.add('aceite');
+    hint.textContent = 'A abrir o convite…';
+    ringBell();
+    const started = performance.now();
+    let next = '';
+    try {
+      const r = await fetch('/api/aceitar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }), credentials: 'same-origin' });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Não foi possível abrir o convite.');
+      next = data.next || (token ? `/c/${token}` : '/');
+    } catch (err) {
+      busy = false;
+      button.classList.remove('aceite');
+      hint.textContent = s.std_tap_hint;
+      error.textContent = `${err.message && !/fetch|network/i.test(err.message) ? err.message : 'Sem ligação à internet.'} Toque de novo para tentar.`;
+      error.hidden = false;
+      return;
+    }
+    try { if (navigator.vibrate) navigator.vibrate([20, 40, 70]); } catch { /* opcional */ }
+    if (reduced()) { location.assign(next); return; }
+    const wait = (ms) => new Promise((ok) => setTimeout(ok, Math.max(0, ms - (performance.now() - started))));
+    await wait(1700);
+    door.classList.add('visivel');
+    await wait(2700);
+    door.classList.add('aberta');
+    await wait(4700);
+    door.classList.add('entrar');
+    await wait(5500);
+    location.assign(next);
+  }
+  button.addEventListener('click', accept);
+  // Ao voltar atrás para esta página, recomeça do início.
+  addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    busy = false;
+    button.classList.remove('aceite');
+    door.className = 'porta';
+    hint.textContent = s.std_tap_hint;
+  });
 })();

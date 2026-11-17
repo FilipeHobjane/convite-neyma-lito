@@ -29,7 +29,8 @@ before(async () => {
   const r = await call('/api/admin/login', { body: { password: PASSWORD } });
   assert.equal(r.status, 200);
   cookie = r.headers.get('set-cookie').split(';')[0];
-  const s = await admin('settings', 'PUT', { rsvp_deadline: '2099-01-01', wedding_date: '2099-01-02' });
+  // A porta do Save the Date fica desligada aqui; tem o seu próprio teste.
+  const s = await admin('settings', 'PUT', { rsvp_deadline: '2099-01-01', wedding_date: '2099-01-02', std_gate: '0' });
   assert.equal(s.status, 200);
 });
 
@@ -347,12 +348,13 @@ test('Save the Date: link geral e pessoal sem dados a mais', async () => {
   assert.equal(page.status, 200);
   const html = await page.text();
   const data = boot(html);
-  assert.deepEqual(data.guest, { name: 'Tia Ana', cover_line: '' });
+  assert.deepEqual(data.guest, { name: 'Tia Ana', cover_line: '', salutation: '' });
   assert.equal(data.s.wedding_date, '2099-01-02');
   assert.equal(data.events, undefined);
   assert.equal(data.s.mpesa_number, undefined);
   assert.equal(data.s.wedding_time, '11:00', 'conta até à mesma hora do convite');
-  assert.equal(data.s.show_std_invite, '0');
+  assert.equal(data.s.std_button, 'Aceito reservar este dia');
+  assert.equal(data.s.color_std_bg, '#123f31');
   for (const secret of ['+258840000001', 'Nota-privada', 'Interna-privada', 'Carta-privada']) assert.ok(!html.includes(secret), secret);
   assert.match(html, /name="robots" content="noindex"/);
 
@@ -393,6 +395,41 @@ test('Save the Date: link geral e pessoal sem dados a mais', async () => {
   assert.equal(off.headers.get('location'), `/c/${item.token}`);
   await admin('settings', 'PUT', { show_savedate: '1' });
   await admin(`guests/${item.id}`, 'DELETE');
+});
+
+test('porta do Save the Date: o convite só abre depois de aceitar reservar o dia', async () => {
+  const { item } = await adminJson('guests', 'POST', { name: 'Prima Rosa' });
+  await admin('settings', 'PUT', { std_gate: '1' });
+  try {
+    const closed = await call(`/c/${item.token}`);
+    assert.equal(closed.status, 302);
+    assert.equal(closed.headers.get('location'), `/guarde-a-data/${item.token}`);
+    const general = await call('/');
+    assert.equal(general.status, 302);
+    assert.equal(general.headers.get('location'), '/guarde-a-data');
+    assert.equal((await call('/c/inexistente123')).status, 404, 'link inválido continua a dar 404');
+
+    assert.equal((await call('/api/aceitar', { body: { token: 'inexistente123' } })).status, 404);
+    const ok = await call('/api/aceitar', { body: { token: item.token } });
+    assert.equal(ok.status, 200);
+    assert.equal((await ok.json()).next, `/c/${item.token}`);
+    assert.match(ok.headers.get('set-cookie'), /^data_reservada=1; Path=\/; SameSite=Lax/);
+
+    // Aceite no servidor: o link pessoal abre noutro telemóvel, sem o cookie.
+    assert.equal((await call(`/c/${item.token}`)).status, 200);
+    // O link geral abre com o cookie de quem aceitou.
+    assert.equal((await call('/', { headers: { Cookie: 'data_reservada=1' } })).status, 200);
+
+    const first = (await adminJson('all')).guests.find((g) => g.id === item.id).std_accepted_at;
+    assert.ok(first);
+    await call('/api/aceitar', { body: { token: item.token } });
+    assert.equal((await adminJson('all')).guests.find((g) => g.id === item.id).std_accepted_at, first, 'guarda a primeira hora');
+
+    await admin('settings', 'PUT', { show_savedate: '0' });
+    assert.equal((await call('/')).status, 200, 'sem Save the Date, não há porta');
+  } finally {
+    await admin('settings', 'PUT', { std_gate: '0', show_savedate: '1' });
+  }
 });
 
 test('modelos: texto por relação, sem expor os outros níveis', async () => {
@@ -515,7 +552,7 @@ test('migração: base da versão anterior ganha as colunas e mantém os dados',
   old.close();
   const other = await startServer({ port: 0, dbPath: path, env });
   try {
-    const page = boot(await (await fetch(`http://127.0.0.1:${other.server.address().port}/c/token-antigo-123`)).text());
+    const page = boot(await (await fetch(`http://127.0.0.1:${other.server.address().port}/c/token-antigo-123`, { headers: { Cookie: 'data_reservada=1' } })).text());
     assert.equal(page.guest.name, 'Convidado Antigo');
     assert.equal(page.guest.personal_message, '');
     assert.equal(page.s.couple_display, 'Casal Antigo');

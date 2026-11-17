@@ -1,5 +1,13 @@
 # Registo de alterações
 
+## 2.8.0 (17/11/2026)
+
+- Save the Date "porta": até três fotografias com moldura, vídeo e o botão "Aceito reservar este dia". Ao tocar, uma grinalda de rosas esmeralda e chocolate floresce à volta do botão, toca o sino e abrem-se as portas de uma igreja, que levam ao convite. Substitui a raspadinha dourada.
+- O convite só abre depois de aceitar (opção "std_gate" no painel). A hora da aceitação fica registada no convidado e aparece na lista; no link geral, fica guardada no telemóvel.
+- Som do sino: gravação carregada no painel, ou um repique gerado no telemóvel quando não há gravação.
+- Cores próprias do Save the Date no painel. Novos valores iniciais: verde-floresta, creme e caramelo, também no convite.
+- Textos das mensagens do WhatsApp sem referência a raspar.
+
 ## 2.7.2 (11/11/2026)
 
 - Importação do Excel: o painel lê a folha "Exportar para Admin" quando existe, para importar directamente a planilha de convidados (pasta `planilha/`, fora do Git).

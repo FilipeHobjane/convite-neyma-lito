@@ -249,7 +249,7 @@
         kind === 'invite' ? [
           h('p', { class: 'hello' }, g.salutation || fillText(tpl.salutation, g, '') || fillText(D.settings.letter_greeting_personal, g, '').replace('{nome}', g.name)),
           h('p', null, g.personal_message || fillText(tpl.message, g, '') || D.settings.letter_message),
-        ] : h('p', null, D.settings.std_message)),
+        ] : h('p', null, D.settings.std_question)),
       h('p', { class: 'row space' }, h('a', { href: k.link(g), target: '_blank', rel: 'noopener' }, 'Abrir como este convidado')),
       h('h3', { class: 'space' }, 'Mensagem do WhatsApp'),
       text,
@@ -412,7 +412,8 @@
       tbody.replaceChildren(...list.map((g) => h('tr', null,
         h('td', null, h('strong', null, g.name), counts[fold(g.name)] > 1 ? h('div', { class: 'dup' }, 'Possível duplicado') : null,
           h('div', { class: 'muted' }, [g.phone, g.group_name, g.source === 'aberto' ? 'via link geral' : ''].filter(Boolean).join(' · '))),
-        h('td', null, h('span', { class: `tag ${g.status}` }, STATUS[g.status]), g.responded_at ? h('div', { class: 'muted' }, fmtDate(g.responded_at)) : null),
+        h('td', null, h('span', { class: `tag ${g.status}` }, STATUS[g.status]), g.responded_at ? h('div', { class: 'muted' }, fmtDate(g.responded_at)) : null,
+          g.std_accepted_at ? h('div', { class: 'muted' }, `Data reservada ${fmtDate(g.std_accepted_at)}`) : null),
         h('td', null, `${g.companions}/${g.max_companions}`, h('span', { class: 'muted' }, ' acomp.')),
         h('td', null, g.notes ? h('div', { class: 'muted' }, g.notes) : null,
           h('div', { class: 'row' },
@@ -591,13 +592,14 @@
       h('div', { class: 'card' }, h('h2', null, 'Link geral'),
         h('p', null, h('a', { href: '/guarde-a-data', target: '_blank', rel: 'noopener' }, `${location.origin}/guarde-a-data`)),
         h('p', { class: 'muted' }, 'Para mostrar o nome de cada pessoa, envie por Enviar pelo WhatsApp. A data é a de Data e confirmações.')),
-      h('div', { class: 'card' }, h('h2', null, 'Fotografia'),
-        imageSetting('Aparece ao raspar. Ao alto fica melhor, com os rostos a meio ou acima do meio. Sem foto, usa a capa do convite. Com vídeo, a foto aparece enquanto ele carrega.', 'std_photo')),
+      h('div', { class: 'card' }, h('h2', null, 'Fotografias'),
+        h('p', { class: 'muted' }, 'Até três fotografias, com moldura. A primeira é a maior e serve de capa do vídeo. Sem fotografias, usa a capa do convite.'),
+        h('div', { class: 'grid two space' }, imageSetting('Fotografia 1 (principal, ao alto)', 'std_photo'), imageSetting('Fotografia 2', 'std_photo_2'), imageSetting('Fotografia 3', 'std_photo_3'))),
       (() => {
         const d = D.settings;
         const status = h('p', { class: 'muted', role: 'status' });
         return h('div', { class: 'card' }, h('h2', null, 'Vídeo'),
-          h('p', { class: 'muted' }, 'Se carregar um vídeo, é ele que aparece ao raspar, em vez da foto. Começa com som ao revelar a data e repete-se.'),
+          h('p', { class: 'muted' }, 'Aparece por baixo das fotografias. O convidado toca para o ver, com som.'),
           d.std_video ? h('video', { class: 'space', controls: true, playsInline: true, preload: 'metadata', src: media(d.std_video) }) : h('p', { class: 'space' }, 'Nenhum vídeo carregado.'),
           h('div', { class: 'row space' },
             h('label', { class: 'btn alt file' }, d.std_video ? 'Substituir vídeo' : 'Carregar vídeo', h('input', {
@@ -621,17 +623,46 @@
                 }, 'Vídeo carregado.').finally(() => { e.target.disabled = false; });
               },
             })),
-            d.std_video ? h('button', { class: 'btn bad', type: 'button', onclick: () => { if (confirm('Retirar o vídeo? Fica apagado definitivamente e o Save the Date volta a mostrar a foto.')) act(() => api('settings', 'PUT', { std_video: '' }), 'Vídeo retirado.'); } }, 'Retirar vídeo') : null),
+            d.std_video ? h('button', { class: 'btn bad', type: 'button', onclick: () => { if (confirm('Retirar o vídeo? Fica apagado definitivamente.')) act(() => api('settings', 'PUT', { std_video: '' }), 'Vídeo retirado.'); } }, 'Retirar vídeo') : null),
           status,
           h('p', { class: 'muted space' }, 'Recomendado: MP4, ao alto, 10 a 20 segundos, menos de 8 MB. Cada convidado descarrega o vídeo inteiro, por isso um ficheiro leve abre mais depressa e gasta menos dados.'));
       })(),
+      (() => {
+        const d = D.settings;
+        return h('div', { class: 'card' }, h('h2', null, 'Som do sino'),
+          h('p', { class: 'muted' }, 'Toca quando o convidado aceita reservar o dia e as portas da igreja se abrem. Sem gravação, toca um repique gerado no telemóvel. Recomendado: MP3 de 5 a 8 segundos, menos de 1 MB.'),
+          d.std_bell ? h('audio', { class: 'space', controls: true, preload: 'none', src: media(d.std_bell) }) : h('p', { class: 'space' }, 'Nenhuma gravação carregada.'),
+          h('div', { class: 'row space' },
+            h('label', { class: 'btn alt file' }, d.std_bell ? 'Substituir som' : 'Carregar som', h('input', {
+              type: 'file', accept: 'audio/mpeg,audio/ogg,audio/wav,audio/mp4,.mp3,.m4a,.ogg,.wav',
+              onchange: async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 5e6) { toast('O som tem mais de 5 MB. Use um ficheiro curto, de poucos segundos.', true); return; }
+                toast('A carregar som…');
+                act(async () => {
+                  const type = file.type === 'audio/mp3' ? 'audio/mpeg' : file.type === 'audio/x-m4a' ? 'audio/mp4' : file.type;
+                  const id = await uploadBlob(file, type, file.name);
+                  await api('settings', 'PUT', { std_bell: id });
+                }, 'Som do sino carregado.');
+              },
+            })),
+            d.std_bell ? h('button', { class: 'btn bad', type: 'button', onclick: () => { if (confirm('Retirar a gravação do sino? Volta o repique gerado no telemóvel.')) act(() => api('settings', 'PUT', { std_bell: '' }), 'Som retirado.'); } }, 'Retirar som') : null));
+      })(),
       settingsForm('Textos', [
         { k: 'show_savedate', l: 'Save the Date activo (desligado, os links abrem o convite)', t: 'check' },
-        { k: 'show_std_invite', l: 'Mostrar o botão "Abrir o convite" depois de raspar (em vez do aviso sobre o convite)', t: 'check' },
-        { k: 'std_title', l: 'Título (aparece em maiúsculas)' }, { k: 'std_hint', l: 'Instrução para raspar' },
-        { k: 'std_message', l: 'Frase depois de raspar', t: 'area', rows: 2 },
-        { k: 'std_next', l: 'Aviso sobre o convite', t: 'area', rows: 2 },
+        { k: 'std_gate', l: 'O convite só abre depois de tocar em "Aceito reservar este dia"', t: 'check' },
+        { k: 'std_title', l: 'Título' }, { k: 'std_kind', l: 'Tipo de cerimónia', ph: 'Bênção matrimonial' },
+        { k: 'std_place', l: 'Cidade ou local (ao lado do dia da semana)' }, { k: 'std_question', l: 'Pergunta' },
+        { k: 'std_lock_text', l: 'Explicação por baixo da pergunta', t: 'area', rows: 2 },
+        { k: 'std_button', l: 'Texto do botão' }, { k: 'std_tap_hint', l: 'Instrução por baixo do botão' },
+        { k: 'std_door_caption', l: 'Frase nas portas da igreja', help: '{casal} é substituído pelos nomes do casal.' },
         { k: 'std_share_message', l: 'Mensagem no WhatsApp para quem não tem modelo próprio', t: 'area', rows: 2 },
+      ]),
+      settingsForm('Cores do Save the Date', [
+        { k: 'color_std_bg', l: 'Fundo', t: 'color' }, { k: 'color_std_text', l: 'Nomes e títulos', t: 'color' },
+        { k: 'color_std_soft', l: 'Textos pequenos', t: 'color' }, { k: 'color_std_frame', l: 'Molduras das fotos e do vídeo', t: 'color' },
+        { k: 'color_std_button', l: 'Botão', t: 'color' }, { k: 'color_std_detail', l: 'Detalhes (pontos da data, ramo)', t: 'color' },
       ]),
     ]],
     programa: ['Programa e locais', () => [

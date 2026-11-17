@@ -18,6 +18,7 @@ const LIMITS = {
   mensagem: { max: 5, seconds: 3600 },
   presente: { max: 10, seconds: 3600 },
   login: { max: 5, seconds: 900 },
+  aceitar: { max: 30, seconds: 3600 },
 };
 
 const EDGE_CACHE_SECONDS = 86400;
@@ -126,8 +127,12 @@ const escHtml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;
 
 // Os robôs do WhatsApp não executam JavaScript: os metadados têm de vir no HTML.
 async function renderInvite(request, env, db, token) {
-  const asset = await env.ASSETS.fetch(new URL('/', request.url));
   const data = await publicData(db, token);
+  // Porta do Save the Date: sem aceitar reservar o dia, o convite volta ao Save the Date.
+  if (data.s.std_gate === '1' && data.s.show_savedate !== '0' && !data.invalidToken && !(await stdAccepted(request, db, token))) {
+    return new Response(null, { status: 302, headers: { Location: token ? `/guarde-a-data/${token}` : '/guarde-a-data', 'Cache-Control': 'no-store' } });
+  }
+  const asset = await env.ASSETS.fetch(new URL('/', request.url));
   const origin = new URL(request.url).origin;
   const { s } = data;
   const image = s.cover_image ? `${origin}/media/${s.cover_image}` : `${origin}/icons/og.jpg`;
@@ -155,11 +160,11 @@ async function renderInvite(request, env, db, token) {
 }
 
 // Save the Date: recebe só o necessário, sem programa, presentes nem outros dados do convidado.
-const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'wedding_time', 'event_tz', 'thanks_after_event', 'show_std_invite', 'envelope_seal_text', 'std_photo', 'std_video', 'cover_image', 'std_title', 'std_hint', 'std_message', 'std_next', 'color_primary', 'color_gold', 'font_titles', 'font_text'];
+const SAVE_DATE_KEYS = ['couple_display', 'bride_name', 'groom_name', 'wedding_date', 'wedding_time', 'event_tz', 'thanks_after_event', 'envelope_seal_text', 'std_photo', 'std_photo_2', 'std_photo_3', 'std_video', 'std_bell', 'cover_image', 'std_title', 'std_kind', 'std_place', 'std_question', 'std_lock_text', 'std_button', 'std_tap_hint', 'std_door_caption', 'color_std_bg', 'color_std_text', 'color_std_soft', 'color_std_button', 'color_std_detail', 'color_std_frame'];
 
 async function renderSaveDate(request, env, db, token) {
   const s = { ...DEFAULT_SETTINGS, ...(await getSettings(db)) };
-  const guest = token ? await db.prepare('SELECT name, group_name FROM guests WHERE token=?').bind(token).first() : null;
+  const guest = token ? await db.prepare('SELECT name, group_name, salutation FROM guests WHERE token=?').bind(token).first() : null;
   if (s.show_savedate === '0') {
     return new Response(null, { status: 302, headers: { Location: token && guest ? `/c/${token}` : '/' } });
   }
@@ -177,7 +182,8 @@ async function renderSaveDate(request, env, db, token) {
     `<meta name="twitter:card" content="summary_large_image">`,
     token ? '<meta name="robots" content="noindex">' : '',
   ].join('\n');
-  const data = { s: Object.fromEntries(SAVE_DATE_KEYS.map((k) => [k, s[k]])), guest: guest ? { name: guest.name, cover_line: guestTemplate(guest, s).cover_line } : null };
+  const tpl = guest ? guestTemplate(guest, s) : null;
+  const data = { s: Object.fromEntries(SAVE_DATE_KEYS.map((k) => [k, s[k]])), guest: guest ? { name: guest.name, cover_line: tpl.cover_line, salutation: guest.salutation || tpl.salutation } : null };
   const boot = JSON.stringify(data).replace(/</g, '\\u003c');
   const html = (await asset.text())
     .replace('<!--META-->', () => meta)
@@ -188,7 +194,32 @@ async function renderSaveDate(request, env, db, token) {
   });
 }
 
+const STD_COOKIE = 'data_reservada';
+const hasStdCookie = (request) => (request.headers.get('Cookie') || '').split(/;\s*/).includes(`${STD_COOKIE}=1`);
+
+async function stdAccepted(request, db, token) {
+  if (hasStdCookie(request)) return true;
+  if (!token) return false;
+  const row = await db.prepare('SELECT std_accepted_at FROM guests WHERE token=?').bind(token).first();
+  return Boolean(row && row.std_accepted_at);
+}
+
 // ---------- Rotas públicas de escrita ----------
+
+// "Aceito reservar este dia": regista a hora (só a primeira) e abre a porta do convite neste telemóvel.
+async function acceptSaveDate(request, env, db) {
+  const body = await readJson(request, 2_000);
+  await rateLimit(db, request, env, 'aceitar');
+  const token = str(body.token, 40);
+  if (token) {
+    const row = await db.prepare('UPDATE guests SET std_accepted_at=COALESCE(std_accepted_at,?) WHERE token=? RETURNING std_accepted_at').bind(nowIso(), token).first();
+    if (!row) fail(404, 'Convite não encontrado.');
+  }
+  const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : '';
+  return json({ ok: true, next: token ? `/c/${token}` : '/' }, 200, {
+    'Set-Cookie': `${STD_COOKIE}=1; Path=/; SameSite=Lax; Max-Age=31536000${secure}`,
+  });
+}
 
 const normalizeName = (v) => str(v, 120).replace(/\s+/g, ' ');
 
@@ -386,7 +417,7 @@ async function putChunk(request, db, id, idx) {
 // ---------- Administração: validação ----------
 
 const URL_SETTINGS = new Set(['footer_instagram']);
-const MEDIA_SETTINGS = new Set(['std_photo', 'std_video','groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
+const MEDIA_SETTINGS = new Set(['std_photo', 'std_photo_2', 'std_photo_3', 'std_video', 'std_bell', 'groom_photo', 'bride_photo', 'cover_image', 'dresscode_women_image', 'dresscode_men_image', 'music_file']);
 
 function cleanSetting(key, raw) {
   const value = str(raw, key === 'relation_templates' ? 40000 : 6000);
@@ -860,6 +891,7 @@ async function route(request, env, ctx) {
   if ((m = /^\/guarde-a-data(?:\/([\w-]{8,40}))?\/?$/.exec(p)) && method === 'GET') return renderSaveDate(request, env, db, m[1] || '');
   if ((m = /^\/media\/([a-f0-9]{32})$/.exec(p)) && (method === 'GET' || method === 'HEAD')) return serveMedia(request, db, m[1], ctx);
 
+  if (p === '/api/aceitar' && method === 'POST') return acceptSaveDate(request, env, db);
   if (p === '/api/rsvp' && method === 'POST') return submitRsvp(request, env, db);
   if (p === '/api/mensagem' && method === 'POST') return submitMessage(request, env, db);
   if ((m = /^\/api\/presente\/(\d+)$/.exec(p)) && method === 'POST') return chooseGift(request, env, db, Number(m[1]));

@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '6';
+export const SCHEMA_VERSION = '7';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -24,7 +24,8 @@ export const SCHEMA = [
      salutation TEXT DEFAULT '',
      personal_message TEXT DEFAULT '',
      savedate_sent_at TEXT,
-     invite_sent_at TEXT)`,
+     invite_sent_at TEXT,
+     std_accepted_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_guests_status ON guests(status)`,
   `CREATE TABLE IF NOT EXISTS chapters (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT, title TEXT NOT NULL, text TEXT, image TEXT DEFAULT '', order_index INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, relacao TEXT, mensagem TEXT NOT NULL, aprovado INTEGER DEFAULT 0, oculto INTEGER DEFAULT 0, data_criacao TEXT)`,
@@ -45,6 +46,7 @@ export const COLUMN_MIGRATIONS = [
   `ALTER TABLE guests ADD COLUMN personal_message TEXT DEFAULT ''`,
   `ALTER TABLE guests ADD COLUMN savedate_sent_at TEXT`,
   `ALTER TABLE guests ADD COLUMN invite_sent_at TEXT`,
+  `ALTER TABLE guests ADD COLUMN std_accepted_at TEXT`,
 ];
 
 // Secções do convite: a chave dá os nomes eyebrow, title e show nas definições.
@@ -70,7 +72,7 @@ const SECTION_SETTINGS = Object.fromEntries(Object.entries(SECTIONS).flatMap(([k
 export const BACKUP_TABLES = {
   settings: ['key', 'value'],
   events: ['id', 'time', 'title', 'location', 'description', 'map_url', 'order_index'],
-  guests: ['id', 'token', 'name', 'phone', 'group_name', 'max_companions', 'status', 'companions', 'companion_names', 'notes', 'admin_notes', 'source', 'responded_at', 'created_at', 'salutation', 'personal_message', 'savedate_sent_at', 'invite_sent_at'],
+  guests: ['id', 'token', 'name', 'phone', 'group_name', 'max_companions', 'status', 'companions', 'companion_names', 'notes', 'admin_notes', 'source', 'responded_at', 'created_at', 'salutation', 'personal_message', 'savedate_sent_at', 'invite_sent_at', 'std_accepted_at'],
   chapters: ['id', 'label', 'title', 'text', 'image', 'order_index'],
   messages: ['id', 'nome', 'relacao', 'mensagem', 'aprovado', 'oculto', 'data_criacao'],
   gallery: ['id', 'media_id', 'thumb_id', 'is_main', 'order_index'],
@@ -81,13 +83,13 @@ export const BACKUP_TABLES = {
 };
 
 export const DEFAULT_THEME = {
-  color_primary: '#5e1f27',
-  color_secondary: '#75604f',
-  color_background: '#f8f2e7',
-  color_text: '#2e211c',
-  color_titles: '#5e1f27',
-  color_buttons: '#5e1f27',
-  color_gold: '#a98544',
+  color_primary: '#123f31',
+  color_secondary: '#6e5446',
+  color_background: '#f6efe6',
+  color_text: '#3e2418',
+  color_titles: '#123f31',
+  color_buttons: '#123f31',
+  color_gold: '#b07a55',
   font_titles: "'Cormorant Garamond', serif",
   font_text: "'Jost', sans-serif",
   font_title_size: '2.4',
@@ -104,17 +106,17 @@ export const FONT_OPTIONS = {
 const TEMPLATE = (label, cover_line, salutation, message, wa_savedate, wa_invite) => ({ label, cover_line, salutation, message, wa_savedate, wa_invite });
 export const DEFAULT_TEMPLATES = [
   TEMPLATE('Família próxima', 'Para a nossa família', 'Querido(a) {primeiro_nome},', 'Crescemos convosco e é convosco que queremos viver este dia. Sem vocês não seria a mesma coisa.',
-    '{primeiro_nome}, temos uma notícia muito especial para partilhar consigo primeiro. Raspe o dourado:\n\n{link}', '{primeiro_nome}, chegou o convite do nosso casamento, feito a pensar em si. Com todo o nosso carinho,\n{casal}\n\n{link}'),
+    '{primeiro_nome}, temos uma notícia muito especial para partilhar consigo primeiro. Abra e reserve a data connosco:\n\n{link}', '{primeiro_nome}, chegou o convite do nosso casamento, feito a pensar em si. Com todo o nosso carinho,\n{casal}\n\n{link}'),
   TEMPLATE('Família', 'Para a nossa família', 'Querido(a) {nome},', 'A família é o nosso começo. Ficaremos muito felizes por celebrar este dia consigo.',
-    '{nome}, temos uma novidade para a família. Raspe o dourado e descubra a data:\n\n{link}', '{nome}, é com muita alegria que lhe enviamos o convite do nosso casamento.\n{casal}\n\n{link}'),
+    '{nome}, temos uma novidade para a família. Abra e reserve a data connosco:\n\n{link}', '{nome}, é com muita alegria que lhe enviamos o convite do nosso casamento.\n{casal}\n\n{link}'),
   TEMPLATE('Padrinhos', 'Para os nossos padrinhos', 'Querido(a) {primeiro_nome},', 'Escolhemos-vos para caminhar ao nosso lado. Este dia também é vosso.',
-    '{primeiro_nome}, antes de todos, queremos que guarde esta data. Raspe o dourado:\n\n{link}', '{primeiro_nome}, aqui está o convite do nosso casamento. Obrigado por estar ao nosso lado.\n{casal}\n\n{link}'),
+    '{primeiro_nome}, antes de todos, queremos que guarde esta data. Abra e reserve a data connosco:\n\n{link}', '{primeiro_nome}, aqui está o convite do nosso casamento. Obrigado por estar ao nosso lado.\n{casal}\n\n{link}'),
   TEMPLATE('Amigos próximos', 'Para quem é família por escolha', '{primeiro_nome},', 'Estiveste nas noites longas e nas gargalhadas mais altas. Agora queremos dançar contigo.',
-    '{primeiro_nome}! Tenho uma coisa para ti: raspa o dourado e reserva já esta data 😄\n\n{link}', '{primeiro_nome}, chegou o convite! Não aceitamos um não como resposta 😄\n{casal}\n\n{link}'),
+    '{primeiro_nome}! Tenho uma coisa para ti: abre e reserva já esta data 😄\n\n{link}', '{primeiro_nome}, chegou o convite! Não aceitamos um não como resposta 😄\n{casal}\n\n{link}'),
   TEMPLATE('Amigos', 'Para os nossos amigos', 'Querido(a) {primeiro_nome},', 'Ficaremos muito felizes por celebrar este dia contigo.',
-    '{primeiro_nome}, temos uma novidade! Raspa o dourado e descobre a data:\n\n{link}', '{primeiro_nome}, é com alegria que te enviamos o convite do nosso casamento.\n{casal}\n\n{link}'),
+    '{primeiro_nome}, temos uma novidade! Abre e reserva a data connosco:\n\n{link}', '{primeiro_nome}, é com alegria que te enviamos o convite do nosso casamento.\n{casal}\n\n{link}'),
   TEMPLATE('Colegas', 'Com estima', 'Estimado(a) {nome},', 'Seria uma grande alegria contar com a sua presença neste dia tão importante para nós.',
-    '{nome}, gostaríamos de partilhar uma novidade consigo. Raspe o dourado e descubra a data:\n\n{link}', '{nome}, temos o prazer de lhe enviar o convite do nosso casamento.\n{casal}\n\n{link}'),
+    '{nome}, gostaríamos de partilhar uma novidade consigo. Abra e reserve a data connosco:\n\n{link}', '{nome}, temos o prazer de lhe enviar o convite do nosso casamento.\n{casal}\n\n{link}'),
   TEMPLATE('Outros', '', '', '', '', ''),
 ];
 
@@ -194,13 +196,32 @@ export const DEFAULT_SETTINGS = {
   show_savedate: '1',
   show_std_invite: '0',
   std_photo: '',
+  std_photo_2: '',
+  std_photo_3: '',
   std_video: '',
+  std_bell: '',
+  // O convite só abre depois de o convidado tocar em "Aceito reservar este dia".
+  std_gate: '1',
+  std_kind: 'Bênção matrimonial',
+  std_place: 'Maputo',
+  std_question: 'Pode reservar este dia para nós?',
+  std_lock_text: 'O convite completo só se abre quando aceitar guardar a data.',
+  std_button: 'Aceito reservar este dia',
+  std_tap_hint: 'Toque para abrir o convite',
+  std_door_caption: 'A bênção de {casal} espera por si',
+  // Cores do Save the Date (opção "Floresta e caramelo").
+  color_std_bg: '#123f31',
+  color_std_text: '#f6efe6',
+  color_std_soft: '#d9c7b6',
+  color_std_button: '#b07a55',
+  color_std_detail: '#d29a6f',
+  color_std_frame: '#d9c7b6',
   std_title: 'Save the Date',
   relation_templates: JSON.stringify(DEFAULT_TEMPLATES),
   std_hint: 'Raspe o dourado com o dedo para descobrir',
   std_message: 'Vamos casar, e este dia só fica completo consigo.',
   std_next: 'O convite, com o programa e o local, segue em breve.',
-  std_share_message: 'Temos uma novidade para si. Raspe o dourado e descubra a data:',
+  std_share_message: 'Temos uma novidade para si. Abra e reserve a data connosco:',
   cover_hint: 'Toque no selo para abrir',
   hero_eyebrow: 'Vamos casar',
   hero_eyebrow_after: 'Casámos',
