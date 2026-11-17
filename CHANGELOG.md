@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.11.1
+
+- Sem fotografia carregada, o convite e o envelope mostram um fundo de luzes e linhas finas em champanhe, para que o nível de vidro fosco escolhido no painel se veja logo.
+
 ## 2.11.0 (17/11/2026)
 
 - Save the Date: sem sino, sem rosas e sem portas da igreja. Ao aceitar, a "Fotografia da união" (nova no painel) surge partida em duas metades que se juntam em câmara lenta; uma luz sela o rasgo, a cor volta e abre-se o convite.
