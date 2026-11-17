@@ -76,14 +76,23 @@
   if (s.invite_style !== 'classico') {
     document.documentElement.classList.add('floresta');
     const letters = s.color_invite_text || s.color_std_text;
+    const light = s.glass_mode === 'claro';
     const std = { '--bg': s.color_std_bg, '--text': letters, '--titles': letters, '--secondary': s.color_std_soft, '--buttons': s.color_std_button, '--gold': s.color_std_detail, '--frame': s.color_std_frame, '--font-titles': "'Cormorant Garamond', Georgia, serif", '--font-text': "'Jost', system-ui, sans-serif" };
+    // Modo claro: as mesmas cores, invertidas (fundo marfim, letras verdes, detalhes champanhe mais fundos).
+    if (light && /^#[0-9a-f]{6}$/i.test(letters || '') && /^#[0-9a-f]{6}$/i.test(s.color_std_bg || '')) {
+      document.documentElement.classList.add('vidro-claro');
+      Object.assign(std, { '--primary': `color-mix(in srgb, ${letters} 84%, ${s.color_std_bg})`, '--bg': letters, '--text': s.color_std_bg, '--titles': s.color_std_bg, '--secondary': `color-mix(in srgb, ${s.color_std_bg} 72%, ${letters})`, '--gold': `color-mix(in srgb, ${s.color_std_detail || '#d4a35a'} 70%, #000)` });
+    }
     for (const [k, v] of Object.entries(std)) if (v) root.setProperty(k, v);
     const hex = (s.color_std_button || '#b07a55').replace('#', '');
     const lum = ['0', '2', '4'].map((i) => parseInt(hex.substr(+i, 2), 16) / 255).reduce((a, c, i) => a + c * [0.2126, 0.7152, 0.0722][i], 0);
     root.setProperty('--on-button', lum > 0.45 ? '#1a0f09' : '#fffaf3');
-    // Vidro fosco em todo o convite: o nível vem do painel (0 = sem fosco).
-    const blur = Math.max(0, Math.min(40, Number(s.glass_blur ?? 18) || 0));
-    root.setProperty('--blur', `${blur}px`);
+    // Vidro fosco em todo o convite: nível (0 = sem fosco, 1 a 5) e transparência (1 a 5) vêm do painel.
+    const level = Math.max(0, Math.min(5, Math.round(Number(s.glass_level ?? 3))));
+    const alpha = Math.max(1, Math.min(5, Math.round(Number(s.glass_alpha ?? 3)) || 3));
+    root.setProperty('--blur', `${[0, 4, 10, 18, 26, 36][Number.isFinite(level) ? level : 3]}px`);
+    root.setProperty('--ga', String((light ? [0.22, 0.36, 0.5, 0.64, 0.8] : [0.03, 0.07, 0.12, 0.2, 0.32])[alpha - 1]));
+    root.setProperty('--sec', `${[18, 32, 45, 62, 80][alpha - 1]}%`);
     const pageImg = [s.std_union_photo, s.cover_image, s.std_photo].find((id) => /^[a-f0-9]{32}$/.test(id || ''));
     if (pageImg) { document.documentElement.classList.add('com-fundo'); root.setProperty('--page-img', `url("/media/${pageImg}")`); }
   }
