@@ -311,3 +311,57 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
   .shard{display:none}
 }
 @media print{.dock,.music,.cover,.toast{display:none}body{padding:0}.reveal{opacity:1;transform:none}}
+
+/* ---------- Estilo "Floresta": a mesma linguagem do Save the Date ----------
+   Fundo verde-floresta, letra Jost fina, linhas caramelo e molduras creme. As cores vêm de color_std_*. */
+.floresta{--primary:color-mix(in srgb,var(--bg) 72%,#000);--paper:color-mix(in srgb,var(--bg) 90%,#fff);--deep:color-mix(in srgb,var(--bg) 78%,#000);
+  --line:color-mix(in srgb,var(--secondary) 34%,transparent);--font-titles:'Jost',system-ui,sans-serif;--font-text:'Jost',system-ui,sans-serif;--frame:#d9c7b6;--on-button:#1a0f09;--error:#f0a99f;color-scheme:dark}
+.floresta body{font-weight:300}
+.floresta :is(h1,h2,h3,h4){font-weight:200;letter-spacing:-.01em}
+.floresta :is(h1,h2,h3,h4,.hand,.quote,.hero-date,.cover-guest,.cover-names,.prog time,.deadline,.note p,.after-note,.pass-name,.env-letter,.seal-half,.pass-mono,.manual li::before,.cal-title,.stepper output,.pay strong,.item h4,.count b){font-style:normal}
+.floresta :is(.quote,.note p,.hand-msg,.after-note,.deadline){font-weight:250}
+.floresta .hero h1{font-weight:200;letter-spacing:-.02em}
+.floresta .hero h1 i{font-size:.3em;font-weight:300;color:var(--gold);margin:.25em 0}
+.floresta .hero-date{font-size:1rem;letter-spacing:.2em;text-transform:uppercase;color:var(--secondary)}
+.floresta .count b{font-weight:200}
+.floresta .eyebrow{color:var(--gold)}
+.floresta .rule::before,.floresta .rule::after{background:var(--buttons)}
+.floresta .rule i{width:5px;height:5px;border:0;border-radius:50%;background:var(--gold);transform:none}
+.floresta .tint{background:var(--paper)}
+.floresta .hand{color:var(--text)}
+.floresta .env-letter{color:var(--bg)}
+.floresta .cover{color:var(--text)}
+.floresta .cover-names{font-weight:200;color:var(--text)}
+/* Molduras creme, como as fotografias do Save the Date */
+.floresta :is(.portrait,.chapter-img){border:4px solid var(--frame);border-radius:18px;box-shadow:0 22px 40px -24px rgba(0,0,0,.7)}
+.floresta .gallery{gap:8px}
+.floresta .gallery button{background:var(--deep);border:4px solid var(--frame);border-radius:18px}
+.floresta .formal,.floresta .place,.floresta .item,.floresta .note{border-radius:18px}
+.floresta .formal{outline-offset:-8px;outline-color:color-mix(in srgb,var(--buttons) 55%,transparent)}
+.floresta .note{border-left-color:var(--buttons)}
+.floresta .cal-grid .day{background:var(--buttons);color:var(--on-button)}
+/* Botões caramelo */
+.floresta .btn{background:var(--buttons);border-color:var(--buttons);color:var(--on-button);border-radius:999px}
+.floresta .btn:hover{background:color-mix(in srgb,var(--buttons) 86%,#fff)}
+.floresta .btn.ghost{background:transparent;color:var(--text);border-color:var(--buttons)}
+.floresta .btn.ghost:hover{background:var(--buttons);color:var(--on-button)}
+/* Confirmação e formulários */
+.floresta .rsvp{background:var(--deep);color:var(--text)}
+.floresta .rsvp h2,.floresta .rsvp .eyebrow{color:var(--text)}
+.floresta .rsvp .rule{color:var(--gold)}
+.floresta .rsvp .rule::before,.floresta .rsvp .rule::after{background:var(--buttons)}
+.floresta .card{border-radius:18px;border:1px solid var(--line)}
+.floresta :is(input[type=text],input[type=tel],textarea),.floresta .choice label,.floresta .stepper button{background:var(--deep);color:var(--text);border:1px solid var(--line);border-radius:12px}
+.floresta .choice label:has(input:checked){border-color:var(--buttons);background:color-mix(in srgb,var(--buttons) 18%,var(--deep))}
+.floresta .choice input{accent-color:var(--buttons)}
+.floresta :is(input,textarea):focus{outline-color:var(--buttons);border-color:var(--buttons)}
+.floresta .pass-mono,.floresta .seal-half{color:var(--text)}
+/* Navegação e rodapé */
+.floresta .dock{background:color-mix(in srgb,var(--deep) 92%,transparent)}
+.floresta .dock a.on,.floresta .music{color:var(--text)}
+.floresta .foot{background:var(--deep);color:var(--secondary)}
+.floresta .foot h2{color:var(--text);font-style:normal;font-weight:200}
+.floresta .foot .btn.ghost{color:var(--text);border-color:var(--buttons)}
+.floresta .foot .btn.ghost:hover{background:var(--buttons);color:var(--on-button)}
+.floresta .toast{background:var(--text);color:var(--bg)}
+.floresta .swatches i{box-shadow:0 0 0 1px var(--line)}

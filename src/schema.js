@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '8';
+export const SCHEMA_VERSION = '9';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -217,6 +217,8 @@ export const DEFAULT_SETTINGS = {
   color_std_detail: '#d29a6f',
   color_std_frame: '#d9c7b6',
   std_title: 'Save the Date',
+  // 'floresta': o convite usa as cores e a letra do Save the Date. 'classico': fundo claro e letra clássica.
+  invite_style: 'floresta',
   relation_templates: JSON.stringify(DEFAULT_TEMPLATES),
   std_hint: 'Raspe o dourado com o dedo para descobrir',
   std_message: 'Vamos casar, e este dia só fica completo consigo.',

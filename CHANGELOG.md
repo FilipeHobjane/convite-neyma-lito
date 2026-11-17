@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.10.0 (17/11/2026)
+
+- Estilo "Floresta" do convite completo: a mesma linguagem do Save the Date (fundo verde-floresta, letra Jost fina, botões e linhas caramelo, fotografias com moldura creme). As cores vêm de "Cores do Save the Date". Escolha em Aparência → Estilo do convite; "Clássico" mantém o desenho anterior.
+
 ## 2.9.0 (17/11/2026)
 
 - Painel "virgem": os valores iniciais deixam de ter um casal de exemplo. Passam a ser genéricos (Noiva, Noivo, Pai da noiva, Local da cerimónia religiosa, Local da recepção, Nome da loja) e os dados de pagamento ficam vazios.
