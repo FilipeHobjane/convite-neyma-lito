@@ -843,7 +843,12 @@
           { k: 'invite_style', l: 'Estilo', t: 'select', options: [['floresta', 'Floresta: igual ao Save the Date (verde, creme e caramelo)'], ['classico', 'Clássico: fundo claro e letra clássica']],
             help: 'No estilo Floresta as cores vêm de Save the Date → Cores do Save the Date, e as cores abaixo não se aplicam.' },
           { k: 'color_invite_text', l: 'Cor das letras no estilo Floresta', t: 'color', help: 'Nomes, títulos e textos do convite completo.' },
-          { k: 'glass_blur', l: 'Nível do vidro fosco (0 a 40)', t: 'range', min: 0, max: 40, step: 1, help: 'Arraste para a esquerda para menos fosco; todo à esquerda (0) fica vidro limpo, sem fosco. Recomendado: 18.' },
+          { k: 'glass_mode', l: 'Modo do vidro', t: 'select', options: [['escuro', 'Escuro: fundo verde e letras marfim'], ['claro', 'Claro: fundo marfim e letras verdes']],
+            help: 'Muda o convite inteiro, incluindo o envelope de abertura.' },
+          { k: 'glass_level', l: 'Nível do vidro fosco', t: 'select', options: [['0', 'Sem fosco (vidro limpo)'], ['1', '1: muito leve'], ['2', '2: leve'], ['3', '3: médio (recomendado)'], ['4', '4: forte'], ['5', '5: muito forte']],
+            help: 'Quanto o vidro desfoca o que está por trás.' },
+          { k: 'glass_alpha', l: 'Transparência do vidro sobre o fundo', t: 'select', options: [['1', '1: muito transparente (vê-se bem o fundo)'], ['2', '2: transparente'], ['3', '3: médio (recomendado)'], ['4', '4: pouco transparente'], ['5', '5: quase opaco']],
+            help: 'Quanto o fundo (fotografia ou padrão) aparece através dos painéis.' },
         ], 'one'),
         settingsForm('Cores e letra', [
           { k: 'color_primary', l: 'Principal', t: 'color' }, { k: 'color_gold', l: 'Destaque (linhas e detalhes)', t: 'color' },

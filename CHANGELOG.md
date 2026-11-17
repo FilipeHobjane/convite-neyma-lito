@@ -1,5 +1,10 @@
 # Registo de alterações
 
+## 2.12.0
+
+- Painel → Aparência: modo do vidro (escuro ou claro), nível do fosco de 1 a 5 (ou sem fosco) e transparência do vidro sobre o fundo de 1 a 5. Substituem o regulador de 0 a 40.
+- Modo claro: fundo marfim, letras verde-sálvia, vidro branco leitoso, selo verde.
+
 ## 2.11.1
 
 - Sem fotografia carregada, o convite e o envelope mostram um fundo de luzes e linhas finas em champanhe, para que o nível de vidro fosco escolhido no painel se veja logo.

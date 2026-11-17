@@ -398,10 +398,10 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
   background:radial-gradient(40% 30% at 25% 30%,color-mix(in srgb,var(--gold) 40%,transparent),transparent 70%),
     radial-gradient(36% 28% at 78% 70%,color-mix(in srgb,var(--gold) 26%,transparent),transparent 70%),
     repeating-linear-gradient(135deg,color-mix(in srgb,var(--gold) 26%,transparent) 0 1px,transparent 1px 14px)}
-.floresta :is(.tint,.rsvp,.foot){background:color-mix(in srgb,var(--deep) 45%,transparent)}
-.floresta.com-fundo :is(.tint,.rsvp,.foot){background:color-mix(in srgb,var(--deep) 45%,transparent)}
+.floresta :is(.tint,.rsvp,.foot){background:color-mix(in srgb,var(--deep) var(--sec,45%),transparent)}
+.floresta.com-fundo :is(.tint,.rsvp,.foot){background:color-mix(in srgb,var(--deep) var(--sec,45%),transparent)}
 .floresta :is(.formal,.place,.item,.note,.card,.calendar,.pass){
-  background:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 45%,rgba(255,255,255,.07));
+  background:linear-gradient(150deg,rgb(255 255 255/calc(var(--ga,.12)*1.1)),rgb(255 255 255/calc(var(--ga,.12)*.35)) 45%,rgb(255 255 255/calc(var(--ga,.12)*.6)));
   border:1px solid rgba(255,255,255,.2);border-radius:22px;outline:0;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 24px 50px -28px rgba(0,0,0,.6);
   -webkit-backdrop-filter:blur(var(--blur,18px)) saturate(140%);backdrop-filter:blur(var(--blur,18px)) saturate(140%)}
@@ -411,3 +411,21 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
   -webkit-backdrop-filter:blur(var(--blur,18px)) saturate(140%);backdrop-filter:blur(var(--blur,18px)) saturate(140%)}
 .floresta .dock{background:color-mix(in srgb,var(--deep) 55%,transparent)}
 .floresta .letter{background:color-mix(in srgb,var(--bg) 70%,transparent);-webkit-backdrop-filter:blur(calc(var(--blur,18px) + 6px));backdrop-filter:blur(calc(var(--blur,18px) + 6px))}
+
+/* ---------- Modo claro do vidro: fundo marfim, letras verdes, vidro branco leitoso ---------- */
+.floresta.vidro-claro{--primary:color-mix(in srgb,var(--bg) 86%,var(--text));--paper:color-mix(in srgb,var(--bg) 70%,#fff);--deep:color-mix(in srgb,var(--bg) 88%,var(--text));
+  --line:color-mix(in srgb,var(--text) 22%,transparent);--error:#9b2c24;color-scheme:light}
+.floresta.vidro-claro body{font-weight:350}
+.floresta.vidro-claro :is(.formal,.place,.item,.note,.card,.calendar,.pass){
+  background:linear-gradient(150deg,rgb(255 255 255/var(--ga,.5)),rgb(255 255 255/calc(var(--ga,.5)*.6)) 45%,rgb(255 255 255/calc(var(--ga,.5)*.8)));
+  border-color:rgba(255,255,255,.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 24px 50px -30px color-mix(in srgb,var(--text) 45%,transparent)}
+.floresta.vidro-claro :is(.dock,.music){background:rgb(255 255 255/calc(var(--ga,.5)*.9));border-color:rgba(255,255,255,.7)}
+.floresta.vidro-claro .letter{background:color-mix(in srgb,var(--bg) 80%,transparent)}
+.floresta.vidro-claro .vidro{background:linear-gradient(150deg,rgb(255 255 255/var(--ga,.5)),rgb(255 255 255/calc(var(--ga,.5)*.55)) 45%,rgb(255 255 255/calc(var(--ga,.5)*.75)));
+  border-color:rgba(255,255,255,.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 30px 70px -34px color-mix(in srgb,var(--text) 50%,transparent)}
+.floresta.vidro-claro .cover::after{background:radial-gradient(70% 50% at 50% 30%,color-mix(in srgb,var(--gold) 14%,transparent),transparent 70%),linear-gradient(color-mix(in srgb,var(--bg) 30%,transparent),color-mix(in srgb,var(--bg) 60%,transparent))}
+.floresta.vidro-claro .cover.com-foto::before{filter:blur(18px) saturate(1) brightness(1.05)}
+.floresta.vidro-claro.com-fundo body::before{filter:blur(6px) saturate(.85) brightness(1.08)}
+.floresta.vidro-claro .env-letter{color:var(--text)}
+.floresta.vidro-claro .seal-half{background:color-mix(in srgb,var(--text) 92%,#fff);color:var(--bg)}
+.floresta.vidro-claro :is(.portrait,.chapter-img,.gallery button){box-shadow:0 22px 40px -26px color-mix(in srgb,var(--text) 55%,transparent)}

@@ -432,7 +432,9 @@ function cleanSetting(key, raw) {
   if (key === 'wedding_time') return isTime(value) ? value : fail(400, 'Hora inválida.');
   if (key === 'event_tz') return isTz(value) ? value : fail(400, 'Fuso horário inválido.');
   if (key === 'invite_style') return value === 'classico' ? 'classico' : 'floresta';
-  if (key === 'glass_blur') return String(int(value, 0, 40, 18));
+  if (key === 'glass_mode') return value === 'claro' ? 'claro' : 'escuro';
+  if (key === 'glass_level') return String(int(value, 0, 5, 3));
+  if (key === 'glass_alpha') return String(int(value, 1, 5, 3));
   if (key === 'public_max_companions') return String(int(value, 0, 20, 0));
   if (key === 'rsvp_public' || key === 'gift_one_per_guest' || key === 'music_enabled' || key.startsWith('show_')) return value === '1' ? '1' : '0';
   if (URL_SETTINGS.has(key)) return safeUrl(value);
