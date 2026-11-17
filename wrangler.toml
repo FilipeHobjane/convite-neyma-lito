@@ -1,11 +1,11 @@
 # Configuração Cloudflare Pages. O database_id é um identificador, não um segredo.
 # Substitua-o pelo valor da sua base D1 (ver docs/PUBLICACAO.md).
-name = "convite-casamento"
+name = "neyma-lito"
 pages_build_output_dir = "public"
 compatibility_date = "2026-10-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "convite"
-database_id = "e78b10ba-49cf-4dc0-9edc-ebfe448bb299"
+database_name = "convite-neyma-lito"
+database_id = "f11fac53-46d6-4ac0-8e6e-8b3141ac6bc8"
 
