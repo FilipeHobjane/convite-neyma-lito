@@ -431,6 +431,7 @@ function cleanSetting(key, raw) {
   if (key === 'wedding_date' || key === 'rsvp_deadline') return isDate(value) ? value : fail(400, 'Data inválida.');
   if (key === 'wedding_time') return isTime(value) ? value : fail(400, 'Hora inválida.');
   if (key === 'event_tz') return isTz(value) ? value : fail(400, 'Fuso horário inválido.');
+  if (key === 'invite_style') return value === 'classico' ? 'classico' : 'floresta';
   if (key === 'public_max_companions') return String(int(value, 0, 20, 0));
   if (key === 'rsvp_public' || key === 'gift_one_per_guest' || key === 'music_enabled' || key.startsWith('show_')) return value === '1' ? '1' : '0';
   if (URL_SETTINGS.has(key)) return safeUrl(value);

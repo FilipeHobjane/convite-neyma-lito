@@ -853,6 +853,10 @@
       const fontName = (v) => v.split(',')[0].replace(/'/g, '');
       return [
         h('h1', null, 'Aparência'),
+        settingsForm('Estilo do convite', [
+          { k: 'invite_style', l: 'Estilo', t: 'select', options: [['floresta', 'Floresta: igual ao Save the Date (verde, creme e caramelo)'], ['classico', 'Clássico: fundo claro e letra clássica']],
+            help: 'No estilo Floresta as cores vêm de Save the Date → Cores do Save the Date, e as cores abaixo não se aplicam.' },
+        ], 'one'),
         settingsForm('Cores e letra', [
           { k: 'color_primary', l: 'Principal', t: 'color' }, { k: 'color_gold', l: 'Destaque (linhas e detalhes)', t: 'color' },
           { k: 'color_background', l: 'Fundo', t: 'color' }, { k: 'color_text', l: 'Texto', t: 'color' },
