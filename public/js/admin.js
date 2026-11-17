@@ -86,6 +86,11 @@
     else if (def.t === 'check') return h('label', { class: 'check' }, h('input', { ...common, type: 'checkbox', checked: v === '1' || v === 1 }), def.l);
     else if (def.t === 'select') input = h('select', common, def.options.map(([val, txt]) => h('option', { value: val, selected: String(val) === String(v) }, txt)));
     else input = h('input', { ...common, type: def.t || 'text', value: v, placeholder: def.ph || '', step: def.step, min: def.min, max: def.max });
+    if (def.t === 'range') {
+      const out = h('output', null, String(v));
+      input.addEventListener('input', () => { out.textContent = input.value; });
+      return h('label', { class: 'f' }, h('span', null, def.l, ': ', out), input, def.help ? h('small', { class: 'muted' }, def.help) : null);
+    }
     return h('label', { class: 'f' }, h('span', null, def.l), input, def.help ? h('small', { class: 'muted' }, def.help) : null);
   }
   function readForm(form) {
@@ -838,6 +843,7 @@
           { k: 'invite_style', l: 'Estilo', t: 'select', options: [['floresta', 'Floresta: igual ao Save the Date (verde, creme e caramelo)'], ['classico', 'Clássico: fundo claro e letra clássica']],
             help: 'No estilo Floresta as cores vêm de Save the Date → Cores do Save the Date, e as cores abaixo não se aplicam.' },
           { k: 'color_invite_text', l: 'Cor das letras no estilo Floresta', t: 'color', help: 'Nomes, títulos e textos do convite completo.' },
+          { k: 'glass_blur', l: 'Nível do vidro fosco (0 a 40)', t: 'range', min: 0, max: 40, step: 1, help: 'Arraste para a esquerda para menos fosco; todo à esquerda (0) fica vidro limpo, sem fosco. Recomendado: 18.' },
         ], 'one'),
         settingsForm('Cores e letra', [
           { k: 'color_primary', l: 'Principal', t: 'color' }, { k: 'color_gold', l: 'Destaque (linhas e detalhes)', t: 'color' },

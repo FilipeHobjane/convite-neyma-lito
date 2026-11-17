@@ -223,6 +223,8 @@ export const DEFAULT_SETTINGS = {
   invite_style: 'floresta',
   // Letras do convite no estilo Floresta: o creme quente das horas do programa.
   color_invite_text: '#f5e3ce',
+  // Nível do vidro fosco no estilo Floresta, em píxeis de desfoque (0 = vidro limpo, sem fosco).
+  glass_blur: '18',
   relation_templates: JSON.stringify(DEFAULT_TEMPLATES),
   std_hint: 'Raspe o dourado com o dedo para descobrir',
   std_message: 'Vamos casar, e este dia só fica completo consigo.',
