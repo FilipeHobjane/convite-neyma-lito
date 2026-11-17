@@ -1,6 +1,6 @@
 {
   "name": "convite-casamento",
-  "version": "2.11.0",
+  "version": "2.11.1",
   "private": true,
   "type": "module",
   "description": "Convite de casamento digital sem dependências de execução.",
