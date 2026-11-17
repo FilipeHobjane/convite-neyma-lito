@@ -378,5 +378,23 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
 .vidro{display:flex;flex-direction:column;align-items:center;gap:1.4rem;width:min(92vw,420px);padding:1.8rem 1.2rem 1.6rem;border-radius:28px;
   background:linear-gradient(150deg,rgba(255,255,255,.16),rgba(255,255,255,.05) 45%,rgba(255,255,255,.08));
   border:1px solid rgba(255,255,255,.24);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 30px 70px -30px rgba(0,0,0,.65);
-  -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%)}
+  -webkit-backdrop-filter:blur(var(--blur,22px)) saturate(150%);backdrop-filter:blur(var(--blur,22px)) saturate(150%)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.vidro{background:color-mix(in srgb,var(--primary) 82%,#fff)}}
+
+/* ---------- Vidro fosco em todo o convite (estilo Floresta) ----------
+   Fundo: a fotografia do casal, fixa e escurecida. Por cima, painéis de vidro com o fosco escolhido no painel. */
+.floresta.com-fundo body::before{content:'';position:fixed;inset:-30px;z-index:-2;background:var(--page-img) center/cover no-repeat;filter:blur(6px) saturate(.9) brightness(.42);transform:scale(1.04)}
+.floresta.com-fundo body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(color-mix(in srgb,var(--bg) 62%,transparent),color-mix(in srgb,var(--bg) 82%,transparent))}
+.floresta.com-fundo body{background:var(--bg)}
+.floresta.com-fundo :is(.tint,.rsvp,.foot){background:color-mix(in srgb,var(--deep) 45%,transparent)}
+.floresta :is(.formal,.place,.item,.note,.card,.calendar,.pass){
+  background:linear-gradient(150deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 45%,rgba(255,255,255,.07));
+  border:1px solid rgba(255,255,255,.2);border-radius:22px;outline:0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 24px 50px -28px rgba(0,0,0,.6);
+  -webkit-backdrop-filter:blur(var(--blur,18px)) saturate(140%);backdrop-filter:blur(var(--blur,18px)) saturate(140%)}
+.floresta .calendar{padding:1.4rem 1rem}
+.floresta .note{border-left:1px solid rgba(255,255,255,.2)}
+.floresta :is(.dock,.music){background:linear-gradient(rgba(255,255,255,.1),rgba(255,255,255,.04));border-color:rgba(255,255,255,.18);
+  -webkit-backdrop-filter:blur(var(--blur,18px)) saturate(140%);backdrop-filter:blur(var(--blur,18px)) saturate(140%)}
+.floresta .dock{background:color-mix(in srgb,var(--deep) 55%,transparent)}
+.floresta .letter{background:color-mix(in srgb,var(--bg) 70%,transparent);-webkit-backdrop-filter:blur(calc(var(--blur,18px) + 6px));backdrop-filter:blur(calc(var(--blur,18px) + 6px))}

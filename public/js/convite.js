@@ -81,6 +81,11 @@
     const hex = (s.color_std_button || '#b07a55').replace('#', '');
     const lum = ['0', '2', '4'].map((i) => parseInt(hex.substr(+i, 2), 16) / 255).reduce((a, c, i) => a + c * [0.2126, 0.7152, 0.0722][i], 0);
     root.setProperty('--on-button', lum > 0.45 ? '#1a0f09' : '#fffaf3');
+    // Vidro fosco em todo o convite: o nível vem do painel (0 = sem fosco).
+    const blur = Math.max(0, Math.min(40, Number(s.glass_blur ?? 18) || 0));
+    root.setProperty('--blur', `${blur}px`);
+    const pageImg = [s.std_union_photo, s.cover_image, s.std_photo].find((id) => /^[a-f0-9]{32}$/.test(id || ''));
+    if (pageImg) { document.documentElement.classList.add('com-fundo'); root.setProperty('--page-img', `url("/media/${pageImg}")`); }
   }
 
   const tz = rsvp.tz || '+02:00';

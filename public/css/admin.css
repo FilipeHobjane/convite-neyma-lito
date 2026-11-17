@@ -99,3 +99,5 @@ dialog.wide{width:min(96vw,60rem)}
   .tbl.cards tr{display:block;border-bottom:1px solid var(--line);padding:.6rem 0}
   .tbl.cards td{display:block;border:0;padding:.12rem 0}
 }
+label.f input[type=range]{border:0;padding:0;min-height:36px;background:none;accent-color:var(--brand)}
+label.f output{font-weight:600;color:var(--ink)}
