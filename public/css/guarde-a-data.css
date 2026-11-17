@@ -1,9 +1,10 @@
 @font-face{font-family:'Cormorant Garamond';src:url(/fonts/cormorant.woff2) format('woff2');font-weight:300 700;font-display:swap}
+@font-face{font-family:'Cormorant Garamond';src:url(/fonts/cormorant-italic.woff2) format('woff2');font-weight:300 700;font-style:italic;font-display:swap}
 @font-face{font-family:'Jost';src:url(/fonts/jost.woff2) format('woff2');font-weight:100 900;font-display:swap}
 
 /* Save the Date "porta": as cores vêm do painel (color_std_*), aplicadas por el.style.setProperty. */
 :root{
-  --bg:#123f31;--text:#f6efe6;--soft:#d9c7b6;--button:#b07a55;--on-button:#1a0f09;--detail:#d29a6f;--frame:#d9c7b6;
+  --bg:#0b2b21;--text:#f5e3ce;--soft:#e3d2bc;--button:#c9a063;--on-button:#1a0f09;--detail:#d4a35a;--frame:#c9a063;
   --deep:color-mix(in srgb,var(--bg) 72%,#000);--lift:color-mix(in srgb,var(--bg) 88%,#fff);--line:color-mix(in srgb,var(--soft) 45%,transparent);
   --madeira:#6b4130;--madeira-veio:#57331f;--madeira-sombra:#2e1a10;--madeira-luz:#8a5c45;--ferro:#0f6b4f;--luz:#eaf4ef;
   --font:'Jost',system-ui,sans-serif;--serif:'Cormorant Garamond',Georgia,serif;--ease:cubic-bezier(.22,.8,.26,1);
@@ -26,9 +27,9 @@ button{font:inherit;color:inherit}
 .para{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--detail)}
 .saudacao{font-size:.95rem;color:var(--soft);overflow-wrap:anywhere}
 .saudacao strong{color:var(--text);font-weight:500}
-.nomes{font-family:var(--serif);font-weight:400;font-size:clamp(3.1rem,15vw,4.2rem);line-height:1;letter-spacing:0;display:flex;flex-direction:column;align-items:center;gap:4px;overflow-wrap:anywhere}
-.nomes .e{font-family:var(--font);font-size:.8rem;font-weight:400;letter-spacing:.3em;color:var(--detail)}
-.data{font-weight:300;font-size:1.4rem;letter-spacing:.14em;display:flex;gap:10px;align-items:center;font-variant-numeric:tabular-nums}
+.nomes{font-family:var(--serif);font-weight:500;font-size:clamp(3.1rem,15vw,4.2rem);line-height:1;letter-spacing:0;display:flex;flex-direction:column;align-items:center;gap:4px;overflow-wrap:anywhere}
+.nomes .e{font-family:var(--serif);font-style:italic;font-size:.5em;font-weight:500;line-height:1;color:var(--detail)}
+.data{font-family:var(--serif);font-weight:500;font-size:1.5rem;letter-spacing:.14em;font-variant-numeric:lining-nums tabular-nums;display:flex;gap:10px;align-items:center;font-variant-numeric:lining-nums tabular-nums}
 .data i{width:5px;height:5px;border-radius:50%;background:var(--detail);display:inline-block}
 .data-ext{font-size:.85rem;color:var(--soft)}
 
