@@ -313,17 +313,17 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
 @media print{.dock,.music,.cover,.toast{display:none}body{padding:0}.reveal{opacity:1;transform:none}}
 
 /* ---------- Estilo "Floresta": a mesma linguagem do Save the Date ----------
-   Fundo verde-floresta, letra Jost fina, linhas caramelo e molduras creme. As cores vêm de color_std_*. */
+   Fundo verde-floresta, títulos em Cormorant Garamond, texto em Jost, linhas caramelo e molduras creme. As cores vêm de color_std_*. */
 .floresta{--primary:color-mix(in srgb,var(--bg) 72%,#000);--paper:color-mix(in srgb,var(--bg) 90%,#fff);--deep:color-mix(in srgb,var(--bg) 78%,#000);
-  --line:color-mix(in srgb,var(--secondary) 34%,transparent);--font-titles:'Jost',system-ui,sans-serif;--font-text:'Jost',system-ui,sans-serif;--frame:#d9c7b6;--on-button:#1a0f09;--error:#f0a99f;color-scheme:dark}
+  --line:color-mix(in srgb,var(--secondary) 34%,transparent);--font-titles:'Cormorant Garamond',Georgia,serif;--font-text:'Jost',system-ui,sans-serif;--frame:#d9c7b6;--on-button:#1a0f09;--error:#f0a99f;color-scheme:dark}
 .floresta body{font-weight:300}
-.floresta :is(h1,h2,h3,h4){font-weight:200;letter-spacing:-.01em}
+.floresta :is(h1,h2,h3,h4){font-weight:400;letter-spacing:0}
 .floresta :is(h1,h2,h3,h4,.hand,.quote,.hero-date,.cover-guest,.cover-names,.prog time,.deadline,.note p,.after-note,.pass-name,.env-letter,.seal-half,.pass-mono,.manual li::before,.cal-title,.stepper output,.pay strong,.item h4,.count b){font-style:normal}
-.floresta :is(.quote,.note p,.hand-msg,.after-note,.deadline){font-weight:250}
-.floresta .hero h1{font-weight:200;letter-spacing:-.02em}
+.floresta :is(.quote,.note p,.hand-msg,.after-note,.deadline){font-weight:400}
+.floresta .hero h1{font-weight:400;letter-spacing:0}
 .floresta .hero h1 i{font-size:.3em;font-weight:300;color:var(--gold);margin:.25em 0}
-.floresta .hero-date{font-size:1rem;letter-spacing:.2em;text-transform:uppercase;color:var(--secondary)}
-.floresta .count b{font-weight:200}
+.floresta .hero-date{font-family:var(--font-text);font-weight:300;font-size:1rem;letter-spacing:.2em;text-transform:uppercase;color:var(--secondary)}
+.floresta .count b{font-weight:400}
 .floresta .eyebrow{color:var(--gold)}
 .floresta .rule::before,.floresta .rule::after{background:var(--buttons)}
 .floresta .rule i{width:5px;height:5px;border:0;border-radius:50%;background:var(--gold);transform:none}
@@ -331,7 +331,7 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
 .floresta .hand{color:var(--text)}
 .floresta .env-letter{color:var(--bg)}
 .floresta .cover{color:var(--text)}
-.floresta .cover-names{font-weight:200;color:var(--text)}
+.floresta .cover-names{font-weight:400;color:var(--text)}
 /* Molduras creme, como as fotografias do Save the Date */
 .floresta :is(.portrait,.chapter-img){border:4px solid var(--frame);border-radius:18px;box-shadow:0 22px 40px -24px rgba(0,0,0,.7)}
 .floresta .gallery{gap:8px}
@@ -360,7 +360,7 @@ fieldset{border:0;padding:0;margin:0 0 1.15rem;min-width:0}
 .floresta .dock{background:color-mix(in srgb,var(--deep) 92%,transparent)}
 .floresta .dock a.on,.floresta .music{color:var(--text)}
 .floresta .foot{background:var(--deep);color:var(--secondary)}
-.floresta .foot h2{color:var(--text);font-style:normal;font-weight:200}
+.floresta .foot h2{color:var(--text);font-style:normal;font-weight:400}
 .floresta .foot .btn.ghost{color:var(--text);border-color:var(--buttons)}
 .floresta .foot .btn.ghost:hover{background:var(--buttons);color:var(--on-button)}
 .floresta .toast{background:var(--text);color:var(--bg)}
