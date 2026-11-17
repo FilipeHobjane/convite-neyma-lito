@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '7';
+export const SCHEMA_VERSION = '8';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -121,18 +121,18 @@ export const DEFAULT_TEMPLATES = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  bride_name: 'Nelde Alberto Fumo',
-  groom_name: 'Nilton Manhiça',
-  couple_display: 'Nelde & Nilton',
-  wedding_date: '2026-10-17',
+  bride_name: 'Noiva',
+  groom_name: 'Noivo',
+  couple_display: 'Noiva & Noivo',
+  wedding_date: '2027-06-12',
   wedding_time: '11:00',
   event_tz: '+02:00',
-  site_title: 'Convite de Casamento | Nelde & Nilton',
+  site_title: 'Convite de Casamento | Noiva & Noivo',
   site_description: 'Venha celebrar connosco o nosso grande dia.',
-  groom_father: 'Roberto Alfredo Manhiça',
-  groom_mother: 'Jessica Alberto Manhiça',
-  bride_father: 'Alberto Jose Fumo',
-  bride_mother: 'Adelaide Narenque',
+  groom_father: 'Pai do noivo',
+  groom_mother: 'Mãe do noivo',
+  bride_father: 'Pai da noiva',
+  bride_mother: 'Mãe da noiva',
   groom_photo: '',
   bride_photo: '',
   welcome_title: 'Seja bem-vindo(a)',
@@ -140,7 +140,7 @@ export const DEFAULT_SETTINGS = {
   bible_reference: 'Cânticos 3:4',
   story_title: 'Dois Corações, Um Caminho',
   story_text: 'E entre tantos caminhos, escolhemos caminhar lado a lado',
-  story_author: 'Nelde & Nilton',
+  story_author: 'Noiva & Noivo',
   formal_text: 'Com a bênção de Deus e de seus pais,\nTemos a honra de convidá-lo(a)\npara comemorar esta data especial connosco.',
   guest_label: 'Caro(a) Convidado(a)',
   invite_validity: 'Convite válido para 1 pessoa',
@@ -151,7 +151,7 @@ export const DEFAULT_SETTINGS = {
   dresscode_warning: 'Proibido usar a cor branca',
   dresscode_women_image: '',
   dresscode_men_image: '',
-  rsvp_deadline: '2026-09-20',
+  rsvp_deadline: '2027-05-29',
   rsvp_intro: 'Por favor, confirme a sua presença.',
   rsvp_public: '1',
   public_max_companions: '0',
@@ -162,15 +162,15 @@ export const DEFAULT_SETTINGS = {
   gift_intro: 'A vossa presença é o nosso maior presente.\nCaso deseje oferecer-nos algo encontrará a lista nas seguintes lojas.\nAgradecemos pelo carinho!',
   gift_one_per_guest: '1',
   gift_rule_text: 'Cada convidado pode escolher apenas 1 presente.\nDepois de escolhido, não é possível trocar ou escolher outro.',
-  mpesa_number: '+258 84 4747730',
-  mpesa_holder: 'Nilton Manhiça',
-  emola_number: '+258 86 65 0750',
-  emola_holder: 'Nelde Checo',
-  bank_account: '402630414',
-  bank_nib: '000100000040263041457',
-  bank_holder: 'O casal',
-  footer_brand: 'Nelde & Nilton',
-  footer_text: 'Um convite digital para o casamento de Nelde & Nilton',
+  mpesa_number: '',
+  mpesa_holder: '',
+  emola_number: '',
+  emola_holder: '',
+  bank_account: '',
+  bank_nib: '',
+  bank_holder: '',
+  footer_brand: 'Noiva & Noivo',
+  footer_text: 'Um convite digital para o casamento de Noiva & Noivo',
   footer_instagram: '',
   footer_whatsapp: '',
   footer_email: '',
@@ -181,7 +181,7 @@ export const DEFAULT_SETTINGS = {
   envelope_seal_text: 'N&N',
   manual_guest_items: JSON.stringify([
     { title: 'Convidado não convida', text: 'O convite é pessoal e intransferível' },
-    { title: 'Seja pontual', text: 'A cerimónia começa às 10h00' },
+    { title: 'Seja pontual', text: 'Chegue antes da hora marcada para a cerimónia' },
     { title: 'Tire muitas fotos', text: 'Capture os melhores momentos' },
     { title: 'Aproveite a festa', text: 'Dance, celebre e seja feliz' },
   ]),
@@ -203,7 +203,7 @@ export const DEFAULT_SETTINGS = {
   // O convite só abre depois de o convidado tocar em "Aceito reservar este dia".
   std_gate: '1',
   std_kind: 'Bênção matrimonial',
-  std_place: 'Maputo',
+  std_place: 'Cidade',
   std_question: 'Pode reservar este dia para nós?',
   std_lock_text: 'O convite completo só se abre quando aceitar guardar a data.',
   std_button: 'Aceito reservar este dia',
@@ -231,17 +231,37 @@ export const DEFAULT_SETTINGS = {
 
 const EV = (time, title, location, order_index) => ({ time, title, location, description: '', map_url: '', order_index });
 export const DEFAULT_EVENTS = [
-  EV('11h00', 'Cerimónia Religiosa', 'Igreja Santo António da Poliana', 1),
-  EV('12h30', 'Cerimónia Civil', 'Igreja Santo António da Poliana', 2),
-  EV('14h00', 'Cocktail', 'Salão de Eventos Tulipa', 3),
-  EV('14h50', 'Corte do Bolo', 'Salão de Eventos Tulipa', 4),
-  EV('15h30', "Copo d'Água", 'Salão de Eventos Tulipa', 5),
+  EV('11h00', 'Cerimónia religiosa', 'Local da cerimónia religiosa', 1),
+  EV('13h00', 'Sessão de fotografias', 'Local da sessão de fotografias', 2),
+  EV('14h00', 'Cocktail', 'Local da recepção', 3),
+  EV('15h30', "Copo d'Água", 'Local da recepção', 4),
 ];
 
 export const DEFAULT_STORES = [
-  { name: 'Casa das Loiças', description: 'Loja especializada em loiças, vidros e artigos de mesa.', address: 'Avenida Karl Marx', image: '', phone: '', whatsapp: '', map_url: '', order_index: 0 },
-  { name: 'Louça Amiga', description: 'Variedade em louças e utensílios para a sua casa.', address: 'Avenida Karl Marx', image: '', phone: '', whatsapp: '', map_url: '', order_index: 1 },
+  { name: 'Nome da loja', description: 'Breve descrição do que a loja vende.', address: 'Endereço da loja', image: '', phone: '', whatsapp: '', map_url: '', order_index: 0 },
 ];
+
+// Exemplos das versões anteriores (casal fictício). Uma base que ainda os tenha, sem alteração,
+// passa a mostrar os valores genéricos acima; o que já foi editado no painel fica intacto.
+const OLD_SETTINGS = {
+  bride_name: 'Nelde Alberto Fumo', groom_name: 'Nilton Manhiça', couple_display: 'Nelde & Nilton',
+  wedding_date: '2026-10-17', rsvp_deadline: '2026-09-20', site_title: 'Convite de Casamento | Nelde & Nilton',
+  groom_father: 'Roberto Alfredo Manhiça', groom_mother: 'Jessica Alberto Manhiça', bride_father: 'Alberto Jose Fumo', bride_mother: 'Adelaide Narenque',
+  story_author: 'Nelde & Nilton', mpesa_number: '+258 84 4747730', mpesa_holder: 'Nilton Manhiça', emola_number: '+258 86 65 0750', emola_holder: 'Nelde Checo',
+  bank_account: '402630414', bank_nib: '000100000040263041457', bank_holder: 'O casal',
+  footer_brand: 'Nelde & Nilton', footer_text: 'Um convite digital para o casamento de Nelde & Nilton', std_place: 'Maputo',
+  manual_guest_items: JSON.stringify([
+    { title: 'Convidado não convida', text: 'O convite é pessoal e intransferível' },
+    { title: 'Seja pontual', text: 'A cerimónia começa às 10h00' },
+    { title: 'Tire muitas fotos', text: 'Capture os melhores momentos' },
+    { title: 'Aproveite a festa', text: 'Dance, celebre e seja feliz' },
+  ]),
+};
+const OLD_EVENTS = [
+  ['11h00', 'Cerimónia Religiosa', 'Igreja Santo António da Poliana'], ['12h30', 'Cerimónia Civil', 'Igreja Santo António da Poliana'],
+  ['14h00', 'Cocktail', 'Salão de Eventos Tulipa'], ['14h50', 'Corte do Bolo', 'Salão de Eventos Tulipa'], ['15h30', "Copo d'Água", 'Salão de Eventos Tulipa'],
+];
+const OLD_STORES = [['Casa das Loiças', 'Avenida Karl Marx'], ['Louça Amiga', 'Avenida Karl Marx']];
 
 export const DEFAULT_GIFT_CATEGORIES = ['Electrodomésticos', 'Cozinha', 'Mobília'].map((name, i) => ({ name, image: '', order_index: i }));
 
@@ -264,9 +284,30 @@ export async function ensureSchema(db) {
     }
     await db.prepare(`INSERT OR IGNORE INTO settings(key,value) SELECT key, value FROM json_each(?)`).bind(JSON.stringify(DEFAULT_SETTINGS)).run();
     if (current === null) await seedLists(db);
+    else if (Number(current) < 8) await replaceOldExamples(db);
     await db.prepare(`INSERT OR REPLACE INTO settings(key,value) VALUES('schema_version',?)`).bind(SCHEMA_VERSION).run();
   }
   readyFor = db;
+}
+
+// Só troca o que continua exactamente igual ao exemplo antigo: nada do que o casal escreveu se perde.
+async function replaceOldExamples(db) {
+  const pairs = Object.fromEntries(Object.entries(OLD_SETTINGS).map(([k, old]) => [k, { old, new: DEFAULT_SETTINGS[k] }]));
+  await db.prepare(`UPDATE settings SET value = (SELECT json_extract(j.value,'$.new') FROM json_each(?1) j WHERE j.key = settings.key)
+    WHERE value = (SELECT json_extract(j.value,'$.old') FROM json_each(?1) j WHERE j.key = settings.key)`).bind(JSON.stringify(pairs)).run();
+  const same = (rows, old, cols) => rows.length === old.length
+    && rows.every((r, i) => cols.every((c, j) => r[c] === old[i][j]) && !r.description && !r.map_url && !r.image && !r.phone && !r.whatsapp);
+  const ev = (await db.prepare(`SELECT time,title,location,description,map_url FROM events ORDER BY order_index,id`).all()).results;
+  if (same(ev, OLD_EVENTS, ['time', 'title', 'location'])) {
+    await db.prepare(`DELETE FROM events`).run();
+    await bulkInsert(db, 'events', ['time', 'title', 'location', 'description', 'map_url', 'order_index'], DEFAULT_EVENTS);
+  }
+  const st = (await db.prepare(`SELECT name,address,description,map_url,image,phone,whatsapp FROM stores ORDER BY order_index,id`).all()).results
+    .map((r) => ({ ...r, description: '' }));
+  if (same(st, OLD_STORES, ['name', 'address'])) {
+    await db.prepare(`DELETE FROM stores`).run();
+    await bulkInsert(db, 'stores', ['name', 'description', 'address', 'image', 'phone', 'whatsapp', 'map_url', 'order_index'], DEFAULT_STORES);
+  }
 }
 
 async function seedLists(db) {

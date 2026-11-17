@@ -82,7 +82,7 @@
     const v = values[def.k] ?? '';
     const common = { name: def.k };
     let input;
-    if (def.t === 'area') input = h('textarea', { ...common, rows: def.rows || 3, value: v });
+    if (def.t === 'area') input = h('textarea', { ...common, rows: def.rows || 3, value: v, placeholder: def.ph || '' });
     else if (def.t === 'check') return h('label', { class: 'check' }, h('input', { ...common, type: 'checkbox', checked: v === '1' || v === 1 }), def.l);
     else if (def.t === 'select') input = h('select', common, def.options.map(([val, txt]) => h('option', { value: val, selected: String(val) === String(v) }, txt)));
     else input = h('input', { ...common, type: def.t || 'text', value: v, placeholder: def.ph || '', step: def.step, min: def.min, max: def.max });
@@ -530,10 +530,13 @@
     casal: ['Dados do casal', () => [
       h('h1', null, 'Dados do casal'),
       settingsForm('Noivos', [
-        { k: 'bride_name', l: 'Nome da noiva' }, { k: 'groom_name', l: 'Nome do noivo' },
-        { k: 'bride_father', l: 'Pai da noiva' }, { k: 'groom_father', l: 'Pai do noivo' },
-        { k: 'bride_mother', l: 'Mãe da noiva' }, { k: 'groom_mother', l: 'Mãe do noivo' },
-        { k: 'couple_display', l: 'Nome de apresentação' }, { k: 'envelope_seal_text', l: 'Selo do envelope' },
+        { k: 'bride_name', l: 'Nome da noiva', ph: 'Nome e apelido da noiva', help: 'Nome completo, como deve aparecer no convite. O primeiro nome é usado no Save the Date.' },
+        { k: 'groom_name', l: 'Nome do noivo', ph: 'Nome e apelido do noivo', help: 'Nome completo, como deve aparecer no convite.' },
+        { k: 'bride_father', l: 'Pai da noiva', ph: 'Nome completo', help: 'Aparece na secção "Os noivos". Deixe vazio se não quiser mostrar.' },
+        { k: 'groom_father', l: 'Pai do noivo', ph: 'Nome completo', help: 'Aparece na secção "Os noivos". Deixe vazio se não quiser mostrar.' },
+        { k: 'bride_mother', l: 'Mãe da noiva', ph: 'Nome completo' }, { k: 'groom_mother', l: 'Mãe do noivo', ph: 'Nome completo' },
+        { k: 'couple_display', l: 'Nome de apresentação', ph: 'Ana & João', help: 'Forma curta usada nos títulos, no WhatsApp e nas portas da igreja: os dois primeiros nomes com "&".' },
+        { k: 'envelope_seal_text', l: 'Selo do envelope', ph: 'A&J', help: 'Iniciais do casal, até 4 letras, gravadas no selo de cera.' },
       ]),
       h('div', { class: 'card' }, h('h2', null, 'Fotografias'), h('div', { class: 'grid two' },
         imageSetting('Noiva', 'bride_photo'), imageSetting('Noivo', 'groom_photo'), imageSetting('Capa (também usada na pré-visualização do WhatsApp)', 'cover_image', 1920))),
@@ -541,35 +544,46 @@
     data: ['Data e confirmações', () => [
       h('h1', null, 'Data e confirmações'),
       settingsForm('Data', [
-        { k: 'wedding_date', l: 'Data do casamento', t: 'date' }, { k: 'wedding_time', l: 'Hora', t: 'time' },
-        { k: 'event_tz', l: 'Fuso horário', help: 'Moçambique: +02:00' }, { k: 'rsvp_deadline', l: 'Prazo de confirmação', t: 'date' },
+        { k: 'wedding_date', l: 'Data da cerimónia', t: 'date', help: 'Dia da bênção. Usada no Save the Date, na contagem decrescente e no calendário.' },
+        { k: 'wedding_time', l: 'Hora de início', t: 'time', help: 'Hora a que começa a cerimónia religiosa.' },
+        { k: 'event_tz', l: 'Fuso horário', ph: '+02:00', help: 'Moçambique: +02:00. Só muda se a cerimónia for noutro país.' },
+        { k: 'rsvp_deadline', l: 'Prazo de confirmação', t: 'date', help: 'Último dia em que os convidados podem responder. Depois desta data o formulário fecha.' },
       ]),
       settingsForm('Confirmações', [
         { k: 'rsvp_public', l: 'Permitir confirmar pelo link geral (sem link pessoal)', t: 'check' },
         { k: 'public_max_companions', l: 'Acompanhantes permitidos no link geral', t: 'number', min: 0, max: 20 },
-        { k: 'rsvp_intro', l: 'Texto de introdução', t: 'area', rows: 2 },
-        { k: 'thanks_yes', l: 'Agradecimento: vem', t: 'area', rows: 2 }, { k: 'thanks_no', l: 'Agradecimento: não vem', t: 'area', rows: 2 },
-        { k: 'thanks_after_event', l: 'Agradecimento depois do casamento', t: 'area', rows: 2 },
+        { k: 'rsvp_intro', l: 'Texto de introdução', t: 'area', rows: 2, ph: 'Por favor, confirme a sua presença até…', help: 'Frase por cima do formulário de confirmação.' },
+        { k: 'thanks_yes', l: 'Agradecimento: vem', t: 'area', rows: 2, help: 'Aparece a quem confirma que vem.' },
+        { k: 'thanks_no', l: 'Agradecimento: não vem', t: 'area', rows: 2, help: 'Aparece a quem responde que não pode vir.' },
+        { k: 'thanks_after_event', l: 'Agradecimento depois do casamento', t: 'area', rows: 2, help: 'Substitui o convite depois da data da cerimónia.' },
       ]),
     ]],
     textos: ['Textos', () => [
       h('h1', null, 'Textos do convite'),
       settingsForm('Boas-vindas e história', [
-        { k: 'welcome_title', l: 'Saudação' }, { k: 'bible_reference', l: 'Referência da citação' },
-        { k: 'bible_quote', l: 'Citação', t: 'area', rows: 2 }, { k: 'story_title', l: 'Título' },
-        { k: 'story_text', l: 'Frase do casal', t: 'area', rows: 2 }, { k: 'story_author', l: 'Autoria da frase' },
+        { k: 'welcome_title', l: 'Saudação', ph: 'Seja bem-vindo(a)', help: 'Primeira frase depois de abrir o convite.' },
+        { k: 'bible_reference', l: 'Referência da citação', ph: 'Livro capítulo:versículo', help: 'Por exemplo: 1 Coríntios 13:4.' },
+        { k: 'bible_quote', l: 'Citação', t: 'area', rows: 2, ph: 'Versículo ou frase que inspira o casal' },
+        { k: 'story_title', l: 'Título', ph: 'Dois corações, um caminho' },
+        { k: 'story_text', l: 'Frase do casal', t: 'area', rows: 2, ph: 'Uma frase curta escrita pelos noivos' },
+        { k: 'story_author', l: 'Autoria da frase', ph: 'Ana & João', help: 'Normalmente o nome de apresentação do casal.' },
       ]),
       settingsForm('Convite formal', [
-        { k: 'formal_text', l: 'Texto', t: 'area' }, { k: 'guest_label', l: 'Tratamento geral' },
-        { k: 'invite_validity', l: 'Validade no link geral' }, { k: 'children_notice', l: 'Aviso sobre crianças' },
+        { k: 'formal_text', l: 'Texto', t: 'area', help: 'O convite propriamente dito: quem convida e para quê. Cada linha aparece numa linha.' },
+        { k: 'guest_label', l: 'Tratamento geral', ph: 'Caro(a) Convidado(a)', help: 'Usado quando o convite é aberto pelo link geral, sem nome.' },
+        { k: 'invite_validity', l: 'Validade no link geral', ph: 'Convite válido para 1 pessoa' },
+        { k: 'children_notice', l: 'Aviso sobre crianças', ph: 'Não extensivo a crianças', help: 'Deixe vazio se as crianças forem bem-vindas.' },
       ]),
       settingsForm('Partilha e pesquisa', [
-        { k: 'site_title', l: 'Título da página' }, { k: 'site_description', l: 'Descrição' },
-        { k: 'share_message', l: 'Mensagem de partilha no WhatsApp', t: 'area', rows: 2 },
+        { k: 'site_title', l: 'Título da página', ph: 'Convite de Casamento | Ana & João', help: 'Aparece no separador do navegador e na pré-visualização do link no WhatsApp.' },
+        { k: 'site_description', l: 'Descrição', ph: 'Venha celebrar connosco o nosso grande dia.', help: 'Frase por baixo do título na pré-visualização do link.' },
+        { k: 'share_message', l: 'Mensagem de partilha no WhatsApp', t: 'area', rows: 2, help: 'Texto enviado quando um convidado partilha o link geral.' },
       ]),
       settingsForm('Rodapé', [
-        { k: 'footer_brand', l: 'Nome' }, { k: 'footer_text', l: 'Texto' }, { k: 'footer_instagram', l: 'Instagram (URL)' },
-        { k: 'footer_whatsapp', l: 'WhatsApp (só dígitos, com 258)' }, { k: 'footer_email', l: 'Email' }, { k: 'footer_copyright', l: 'Direitos' },
+        { k: 'footer_brand', l: 'Nome', ph: 'Ana & João' }, { k: 'footer_text', l: 'Texto', ph: 'Um convite digital para o casamento de Ana & João' },
+        { k: 'footer_instagram', l: 'Instagram (URL)', ph: 'https://instagram.com/…', help: 'Opcional. Vazio, o ícone não aparece.' },
+        { k: 'footer_whatsapp', l: 'WhatsApp (só dígitos, com 258)', ph: '25884…', help: 'Opcional. Número para dúvidas dos convidados.' },
+        { k: 'footer_email', l: 'Email', ph: 'nome@exemplo.com', help: 'Opcional.' }, { k: 'footer_copyright', l: 'Direitos', ph: 'Com amor.' },
       ]),
     ]],
     carta: ['Carta e história', () => [
@@ -582,8 +596,8 @@
         { k: 'letter_message', l: 'Mensagem geral', t: 'area', help: 'Para uma mensagem diferente, edite o convidado em Convidados.' },
       ]),
       crud('chapters', 'Capítulos da história', [
-        { k: 'label', l: 'Etiqueta', ph: 'Capítulo um' }, { k: 'title', l: 'Título' },
-        { k: 'text', l: 'Texto', t: 'area' },
+        { k: 'label', l: 'Etiqueta', ph: 'Capítulo um', help: 'Pequeno texto por cima do título, por exemplo o ano.' }, { k: 'title', l: 'Título', ph: 'Como nos conhecemos' },
+        { k: 'text', l: 'Texto', t: 'area', ph: 'Conte este momento da vossa história em poucas linhas.' },
       ], D.chapters, { ordered: true, image: true }),
       h('p', { class: 'muted' }, 'Sem capítulos, esta secção não aparece no convite.'),
     ]],
@@ -652,10 +666,12 @@
       settingsForm('Textos', [
         { k: 'show_savedate', l: 'Save the Date activo (desligado, os links abrem o convite)', t: 'check' },
         { k: 'std_gate', l: 'O convite só abre depois de tocar em "Aceito reservar este dia"', t: 'check' },
-        { k: 'std_title', l: 'Título' }, { k: 'std_kind', l: 'Tipo de cerimónia', ph: 'Bênção matrimonial' },
-        { k: 'std_place', l: 'Cidade ou local (ao lado do dia da semana)' }, { k: 'std_question', l: 'Pergunta' },
+        { k: 'std_title', l: 'Título', ph: 'Save the Date' }, { k: 'std_kind', l: 'Tipo de cerimónia', ph: 'Bênção matrimonial', help: 'Aparece ao lado do título.' },
+        { k: 'std_place', l: 'Cidade ou local (ao lado do dia da semana)', ph: 'Maputo', help: 'Só a cidade: o endereço completo vai em Programa e locais.' },
+        { k: 'std_question', l: 'Pergunta', ph: 'Pode reservar este dia para nós?' },
         { k: 'std_lock_text', l: 'Explicação por baixo da pergunta', t: 'area', rows: 2 },
-        { k: 'std_button', l: 'Texto do botão' }, { k: 'std_tap_hint', l: 'Instrução por baixo do botão' },
+        { k: 'std_button', l: 'Texto do botão', ph: 'Aceito reservar este dia', help: 'Curto: cabe dentro do botão redondo.' },
+        { k: 'std_tap_hint', l: 'Instrução por baixo do botão', ph: 'Toque para abrir o convite' },
         { k: 'std_door_caption', l: 'Frase nas portas da igreja', help: '{casal} é substituído pelos nomes do casal.' },
         { k: 'std_share_message', l: 'Mensagem no WhatsApp para quem não tem modelo próprio', t: 'area', rows: 2 },
       ]),
@@ -669,16 +685,19 @@
       h('h1', null, 'Programa e locais'),
       h('p', { class: 'muted' }, 'Cada local diferente aparece na secção Localização. Sem endereço de mapa, o botão pesquisa o nome no Google Maps.'),
       crud('events', 'Momentos do dia', [
-        { k: 'time', l: 'Hora', ph: '11h00' }, { k: 'title', l: 'Título' }, { k: 'location', l: 'Local' },
-        { k: 'map_url', l: 'Endereço do mapa', ph: 'https://…' }, { k: 'description', l: 'Descrição' },
+        { k: 'time', l: 'Hora', ph: '11h00', help: 'Formato 11h00.' }, { k: 'title', l: 'Momento', ph: 'Cerimónia religiosa', help: 'O que acontece a esta hora.' },
+        { k: 'location', l: 'Local', ph: 'Nome da igreja ou do salão', help: 'Nome do sítio, por exemplo "Igreja de …".' },
+        { k: 'map_url', l: 'Endereço do mapa', ph: 'https://maps.app.goo.gl/…', help: 'No Google Maps: Partilhar → Copiar link.' },
+        { k: 'description', l: 'Descrição', ph: 'Endereço, bairro ou ponto de referência', help: 'Opcional.' },
       ], D.events, { ordered: true }),
     ]],
     dresscode: ['Dress code', () => [
       h('h1', null, 'Dress code'),
       settingsForm('Sugestões', [
-        { k: 'dresscode_text', l: 'Introdução' }, { k: 'dresscode_warning', l: 'Aviso' },
-        { k: 'dresscode_women_colors', l: 'Mulheres (separar por vírgulas)', t: 'area', rows: 2 },
-        { k: 'dresscode_men_colors', l: 'Homens (separar por vírgulas)', t: 'area', rows: 2 },
+        { k: 'dresscode_text', l: 'Introdução', ph: 'Escolha para ver as sugestões de cores' },
+        { k: 'dresscode_warning', l: 'Aviso', ph: 'Proibido usar a cor branca', help: 'Cor ou peça a evitar. Vazio, não aparece.' },
+        { k: 'dresscode_women_colors', l: 'Mulheres (separar por vírgulas)', t: 'area', rows: 2, ph: 'Verde-escuro, Castanho, Bege' },
+        { k: 'dresscode_men_colors', l: 'Homens (separar por vírgulas)', t: 'area', rows: 2, ph: 'Preto, Castanho escuro, Bege' },
       ]),
       h('div', { class: 'card' }, h('h2', null, 'Imagens'), h('div', { class: 'grid two' }, imageSetting('Mulheres', 'dresscode_women_image'), imageSetting('Homens', 'dresscode_men_image'))),
     ]],
@@ -740,17 +759,19 @@
     presentes: ['Presentes', () => [
       h('h1', null, 'Presentes'),
       settingsForm('Regras', [
-        { k: 'gift_intro', l: 'Introdução', t: 'area' }, { k: 'gift_rule_text', l: 'Regra', t: 'area' },
+        { k: 'gift_intro', l: 'Introdução', t: 'area', help: 'Explica aos convidados como podem oferecer um presente.' },
+        { k: 'gift_rule_text', l: 'Regra', t: 'area', help: 'Aparece por cima da lista de presentes.' },
         { k: 'gift_one_per_guest', l: 'Limitar a 1 presente por convidado', t: 'check' },
       ]),
       settingsForm('Presente monetário', [
-        { k: 'mpesa_number', l: 'M-Pesa: número' }, { k: 'mpesa_holder', l: 'M-Pesa: titular' },
-        { k: 'emola_number', l: 'E-Mola: número' }, { k: 'emola_holder', l: 'E-Mola: titular' },
-        { k: 'bank_account', l: 'Banco: conta' }, { k: 'bank_nib', l: 'NIB' }, { k: 'bank_holder', l: 'Banco: titular' },
+        { k: 'mpesa_number', l: 'M-Pesa: número', ph: '+258 84 000 0000', help: 'Vazio, o M-Pesa não aparece.' }, { k: 'mpesa_holder', l: 'M-Pesa: titular', ph: 'Nome registado no M-Pesa' },
+        { k: 'emola_number', l: 'E-Mola: número', ph: '+258 86 000 0000', help: 'Vazio, o E-Mola não aparece.' }, { k: 'emola_holder', l: 'E-Mola: titular', ph: 'Nome registado no E-Mola' },
+        { k: 'bank_account', l: 'Banco: conta', ph: 'Número da conta', help: 'Vazio, os dados bancários não aparecem.' }, { k: 'bank_nib', l: 'NIB', ph: '21 dígitos' },
+        { k: 'bank_holder', l: 'Banco: titular', ph: 'Nome do titular e banco' },
       ]),
-      crud('gift-categories', 'Categorias', [{ k: 'name', l: 'Nome' }], D.categories, { ordered: true, image: true, deleteWarn: 'Eliminar a categoria e todos os seus presentes?' }),
+      crud('gift-categories', 'Categorias', [{ k: 'name', l: 'Nome', ph: 'Cozinha' }], D.categories, { ordered: true, image: true, deleteWarn: 'Eliminar a categoria e todos os seus presentes?' }),
       crud('gifts', 'Lista de presentes', [
-        { k: 'name', l: 'Nome' }, { k: 'description', l: 'Descrição' },
+        { k: 'name', l: 'Nome', ph: 'Jogo de panelas' }, { k: 'description', l: 'Descrição', ph: 'Marca, cor ou loja onde encontrar' },
         { k: 'category_id', l: 'Categoria', t: 'select', options: D.categories.map((c) => [c.id, c.name]) },
       ], D.gifts, {
         image: true,
@@ -761,8 +782,8 @@
     lojas: ['Lojas', () => [
       h('h1', null, 'Lojas sugeridas'),
       crud('stores', 'Lojas', [
-        { k: 'name', l: 'Nome' }, { k: 'description', l: 'Descrição' }, { k: 'address', l: 'Endereço' },
-        { k: 'map_url', l: 'Endereço do mapa' }, { k: 'phone', l: 'Telefone' }, { k: 'whatsapp', l: 'WhatsApp' },
+        { k: 'name', l: 'Nome', ph: 'Nome da loja' }, { k: 'description', l: 'Descrição', ph: 'O que a loja vende' }, { k: 'address', l: 'Endereço', ph: 'Avenida, número, bairro' },
+        { k: 'map_url', l: 'Endereço do mapa', ph: 'https://maps.app.goo.gl/…' }, { k: 'phone', l: 'Telefone', ph: '+258 …' }, { k: 'whatsapp', l: 'WhatsApp', ph: '25884…', help: 'Só dígitos, com 258.' },
       ], D.stores, { ordered: true, image: true }),
     ]],
     manual: ['Informações', () => {
@@ -794,8 +815,8 @@
         { k: 'show_envelope', l: 'Mostrar o envelope de abertura', t: 'check' },
         { k: 'show_countdown', l: 'Mostrar a contagem decrescente', t: 'check' },
         { k: 'show_welcome', l: 'Mostrar as boas-vindas', t: 'check' },
-        { k: 'cover_hint', l: 'Texto debaixo do envelope' },
-        { k: 'hero_eyebrow', l: 'Texto acima dos nomes' },
+        { k: 'cover_hint', l: 'Texto debaixo do envelope', ph: 'Toque no selo para abrir' },
+        { k: 'hero_eyebrow', l: 'Texto acima dos nomes', ph: 'Vamos casar' },
         { k: 'hero_eyebrow_after', l: 'Texto acima dos nomes, depois do casamento' },
       ]),
       Object.entries(D.sections).map(([k, [label]]) => settingsForm(label, [
@@ -833,7 +854,7 @@
       return [
         h('h1', null, 'Aparência'),
         settingsForm('Cores e letra', [
-          { k: 'color_primary', l: 'Principal', t: 'color' }, { k: 'color_gold', l: 'Dourado', t: 'color' },
+          { k: 'color_primary', l: 'Principal', t: 'color' }, { k: 'color_gold', l: 'Destaque (linhas e detalhes)', t: 'color' },
           { k: 'color_background', l: 'Fundo', t: 'color' }, { k: 'color_text', l: 'Texto', t: 'color' },
           { k: 'color_titles', l: 'Títulos', t: 'color' }, { k: 'color_buttons', l: 'Botões', t: 'color' },
           { k: 'color_secondary', l: 'Secundária', t: 'color' },
@@ -927,7 +948,7 @@
         err.textContent = '';
         try { await api('login', 'POST', { password: pass.value }); await load(); } catch (ex) { err.textContent = ex.message; }
       },
-    }, h('h1', null, 'Painel do Convite'),
+    }, h('img', { class: 'logo', src: '/icons/painel.svg', alt: '', width: 56, height: 56 }), h('h1', null, 'Painel do Convite'),
     h('label', { class: 'f' }, h('span', null, 'Senha'), pass), err,
     h('button', { class: 'btn space' }, 'Entrar'))), toastEl);
     pass.focus();
@@ -936,7 +957,7 @@
   function render() {
     const scroll = window.scrollY;
     const side = h('nav', { class: 'side', 'aria-label': 'Secções' },
-      h('div', { class: 'brand' }, D.settings.couple_display),
+      h('div', { class: 'brand' }, h('img', { class: 'logo', src: '/icons/painel.svg', alt: '', width: 30, height: 30 }), D.settings.couple_display),
       Object.entries(VIEWS).map(([k, [label]]) => h('button', {
         type: 'button', 'aria-current': k === current ? 'page' : null,
         onclick: () => { current = k; location.hash = k; render(); scrollTo(0, 0); },

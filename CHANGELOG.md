@@ -1,5 +1,12 @@
 # Registo de alterações
 
+## 2.9.0 (17/11/2026)
+
+- Painel "virgem": os valores iniciais deixam de ter um casal de exemplo. Passam a ser genéricos (Noiva, Noivo, Pai da noiva, Local da cerimónia religiosa, Local da recepção, Nome da loja) e os dados de pagamento ficam vazios.
+- Bases já existentes: os exemplos antigos que nunca foram editados são trocados pelos genéricos ao actualizar (versão 8 da base). O que já foi preenchido no painel fica intacto.
+- Cada campo do painel tem uma indicação do que preencher, com exemplo.
+- Painel com as cores do convite (verde-floresta, creme, caramelo e chocolate) e ícone próprio: coração com flecha de cupido, em preto e branco ao estilo yin-yang.
+
 ## 2.8.0 (17/11/2026)
 
 - Save the Date "porta": até três fotografias com moldura, vídeo e o botão "Aceito reservar este dia". Ao tocar, uma grinalda de rosas esmeralda e chocolate floresce à volta do botão, toca o sino e abrem-se as portas de uma igreja, que levam ao convite. Substitui a raspadinha dourada.
