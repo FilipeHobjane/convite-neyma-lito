@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.14.0
+
+- Retiradas também as secções Presentes (com as lojas) e Manual do Bom Convidado (esquema 13). O menu de baixo fica com Início e Local.
+
 ## 2.13.0
 
 - Convite sem as secções Guarde a Data (calendário), Programa, Dress Code e Confirmação de Presença: ficam desligadas (esquema 12) e voltam a ligar-se em Painel → Secções. O menu de baixo deixa de mostrar Programa e Confirmar.
