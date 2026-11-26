@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.15.0
+
+- Localização só com dois locais: Local da cerimónia religiosa e Local do copo d'água. Saem a sessão de fotografias e a recepção (esquema 14, apenas nos valores de exemplo).
+
 ## 2.14.0
 
 - Retiradas também as secções Presentes (com as lojas) e Manual do Bom Convidado (esquema 13). O menu de baixo fica com Início e Local.
