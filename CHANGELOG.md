@@ -1,5 +1,9 @@
 # Registo de alterações
 
+## 2.13.0
+
+- Convite sem as secções Guarde a Data (calendário), Programa, Dress Code e Confirmação de Presença: ficam desligadas (esquema 12) e voltam a ligar-se em Painel → Secções. O menu de baixo deixa de mostrar Programa e Confirmar.
+
 ## 2.12.0
 
 - Painel → Aparência: modo do vidro (escuro ou claro), nível do fosco de 1 a 5 (ou sem fosco) e transparência do vidro sobre o fundo de 1 a 5. Substituem o regulador de 0 a 40.
