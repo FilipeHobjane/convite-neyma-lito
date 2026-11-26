@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '13';
+export const SCHEMA_VERSION = '14';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -247,9 +247,7 @@ export const DEFAULT_SETTINGS = {
 const EV = (time, title, location, order_index) => ({ time, title, location, description: '', map_url: '', order_index });
 export const DEFAULT_EVENTS = [
   EV('11h00', 'Cerimónia religiosa', 'Local da cerimónia religiosa', 1),
-  EV('13h00', 'Sessão de fotografias', 'Local da sessão de fotografias', 2),
-  EV('14h00', 'Cocktail', 'Local da recepção', 3),
-  EV('15h30', "Copo d'Água", 'Local da recepção', 4),
+  EV('15h30', "Copo d'Água", "Local do copo d'água", 2),
 ];
 
 export const DEFAULT_STORES = [
@@ -307,6 +305,11 @@ export async function ensureSchema(db) {
         .bind(JSON.stringify(keys.map((k) => `show_${k}`))).run();
       if (Number(current) < 12) await hide(HIDDEN_V12);
       if (Number(current) < 13) await hide(HIDDEN_V13);
+      // 2026-11-26: a Localização fica só com a cerimónia e o copo d'água (apenas nos valores de exemplo).
+      if (Number(current) < 14) {
+        await db.prepare(`UPDATE events SET location='Local do copo d''água' WHERE location='Local da recepção' AND title='Copo d''Água'`).run();
+        await db.prepare(`DELETE FROM events WHERE location IN ('Local da sessão de fotografias','Local da recepção')`).run();
+      }
     }
     await db.prepare(`INSERT OR REPLACE INTO settings(key,value) VALUES('schema_version',?)`).bind(SCHEMA_VERSION).run();
   }
