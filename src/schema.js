@@ -1,7 +1,7 @@
 // Estrutura da base de dados (SQLite puro: funciona em D1 e em ficheiro local)
 // e valores iniciais do convite. Editáveis depois no painel; nunca sobrepõem dados gravados.
 
-export const SCHEMA_VERSION = '11';
+export const SCHEMA_VERSION = '12';
 
 export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`,
@@ -64,8 +64,10 @@ export const SECTIONS = {
   manual: ['Manual do convidado', 'Informações úteis', 'Manual do Bom Convidado'],
 };
 
+// Secções que este convite não mostra de origem (pedido de 2026-11-26); voltam a ligar-se no painel.
+const HIDDEN_SECTIONS = ['date', 'program', 'dress', 'rsvp'];
 const SECTION_SETTINGS = Object.fromEntries(Object.entries(SECTIONS).flatMap(([k, [, eyebrow, title]]) => [
-  [`show_${k}`, '1'], [`${k}_eyebrow`, eyebrow], [`${k}_title`, title],
+  [`show_${k}`, HIDDEN_SECTIONS.includes(k) ? '0' : '1'], [`${k}_eyebrow`, eyebrow], [`${k}_title`, title],
 ]));
 
 // Tabelas e colunas incluídas nas cópias de segurança (a ordem é a do restauro).
@@ -299,6 +301,10 @@ export async function ensureSchema(db) {
       if (Number(current) < 8) await replaceOldExamples(db);
       if (Number(current) < 10) await replaceOld(db, OLD_PALETTE);
       if (Number(current) < 11) await replaceOld(db, { std_door_caption: 'A bênção de {casal} espera por si' });
+      if (Number(current) < 12) {
+        await db.prepare(`UPDATE settings SET value='0' WHERE key IN (SELECT value FROM json_each(?))`)
+          .bind(JSON.stringify(HIDDEN_SECTIONS.map((k) => `show_${k}`))).run();
+      }
     }
     await db.prepare(`INSERT OR REPLACE INTO settings(key,value) VALUES('schema_version',?)`).bind(SCHEMA_VERSION).run();
   }
